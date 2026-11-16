@@ -1,0 +1,139 @@
+/**
+ * Media Studio bulk metadata updates.
+ * Mounted under /api/manage so it inherits the existing Basic Auth middleware.
+ * All operations set a specific state (never toggle) and do not touch Telegram media.
+ */
+const FILE_ID = /^[A-Za-z0-9_-]{5,300}\.[A-Za-z0-9]{2,12}$/;
+const INTERNAL = /^[a-z][a-z0-9-]*:/i;
+const ACTIONS = new Set([
+  'favorite', 'unfavorite',
+  'publish', 'unpublish',
+  'add_tags', 'remove_tags',
+  'add_albums', 'remove_albums',
+  'set_category'
+]);
+
+function json(body, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: {
+      'Content-Type': 'application/json; charset=utf-8',
+      'Cache-Control': 'no-store',
+      'X-Content-Type-Options': 'nosniff'
+    }
+  });
+}
+
+function cleanNames(value, maxLength) {
+  if (!Array.isArray(value) || value.length > 15) return null;
+  const names = value.map(x => typeof x === 'string' ? x.trim() : '');
+  if (!names.every(x => x.length > 0 && x.length <= maxLength && !/[\u0000-\u001f\u007f<>]/.test(x))) return null;
+  return [...new Set(names)];
+}
+
+function safeStringList(value) {
+  return Array.isArray(value) ? value.filter(x => typeof x === 'string') : [];
+}
+
+function transform(metadata, payload) {
+  const next = { ...metadata };
+  const action = payload.action;
+  if (action === 'favorite') next.liked = true;
+  if (action === 'unfavorite') next.liked = false;
+  if (action === 'publish') {
+    if (next.ListType === 'Block' || next.Label === 'adult') {
+      throw new Error('Blocked items cannot be published');
+    }
+    next.aiPublished = true;
+  }
+  if (action === 'unpublish') next.aiPublished = false;
+  if (action === 'add_tags') next.tags = [...new Set([...safeStringList(next.tags), ...payload.names])].slice(0, 30);
+  if (action === 'remove_tags') next.tags = safeStringList(next.tags).filter(x => !payload.names.includes(x));
+  if (action === 'add_albums') next.albums = [...new Set([...safeStringList(next.albums), ...payload.names])].slice(0, 30);
+  if (action === 'remove_albums') next.albums = safeStringList(next.albums).filter(x => !payload.names.includes(x));
+  if (action === 'set_category') next.category = payload.category;
+  next.mediaStudioUpdatedAt = Date.now();
+  return next;
+}
+
+export async function onRequestPost(context) {
+  const { request, env } = context;
+  // Unlike the legacy admin, bulk writes fail closed when admin auth is unset.
+  if (!env.BASIC_USER || !env.BASIC_PASS) {
+    return json({ error: 'Admin credentials must be configured' }, 503);
+  }
+  if (!env.img_url || typeof env.img_url.getWithMetadata !== 'function') {
+    return json({ error: 'img_url KV binding is unavailable' }, 503);
+  }
+  const origin = request.headers.get('Origin');
+  if (origin && origin !== new URL(request.url).origin) return json({ error: 'Cross-origin writes are forbidden' }, 403);
+  if (!/^application\/json(?:\s*;|$)/i.test(request.headers.get('Content-Type') || '')) {
+    return json({ error: 'JSON request required' }, 415);
+  }
+
+  let payload;
+  try {
+    const body = await request.text();
+    if (body.length > 32000) return json({ error: 'Request too large' }, 413);
+    payload = JSON.parse(body);
+  } catch {
+    return json({ error: 'Invalid JSON body' }, 400);
+  }
+  if (!payload || typeof payload !== 'object' || !ACTIONS.has(payload.action)) {
+    return json({ error: 'Invalid bulk action' }, 400);
+  }
+  if (!Array.isArray(payload.ids) || payload.ids.length < 1 || payload.ids.length > 50 ||
+      payload.ids.some(id => typeof id !== 'string' || !FILE_ID.test(id) || INTERNAL.test(id))) {
+    return json({ error: 'Choose 1–50 valid file IDs' }, 400);
+  }
+
+  const ids = [...new Set(payload.ids)];
+  if (payload.action.endsWith('_tags') || payload.action.endsWith('_albums')) {
+    const names = cleanNames(payload.names, 48);
+    if (!names || names.length === 0) return json({ error: 'Choose 1–15 valid names' }, 400);
+    payload.names = names;
+  }
+  if (payload.action === 'set_category') {
+    const value = payload.category;
+    if (typeof value !== 'string' || value.length > 48 || /[\u0000-\u001f\u007f<>]/.test(value)) {
+      return json({ error: 'Invalid category' }, 400);
+    }
+    payload.category = value.trim();
+  }
+
+  let position = 0;
+  const results = new Array(ids.length);
+  async function worker() {
+    while (position < ids.length) {
+      const i = position++;
+      const id = ids[i];
+      try {
+        const current = await env.img_url.getWithMetadata(id);
+        if (!current || !current.metadata) {
+          results[i] = { id, ok: false, error: 'File metadata not found' };
+          continue;
+        }
+        const updated = transform(current.metadata, payload);
+        await env.img_url.put(id, current.value == null ? '' : current.value, { metadata: updated });
+        results[i] = { id, ok: true, metadata: {
+          liked: updated.liked === true,
+          aiPublished: updated.aiPublished === true,
+          tags: safeStringList(updated.tags),
+          albums: safeStringList(updated.albums),
+          category: updated.category || ''
+        } };
+      } catch (error) {
+        console.error('Media Studio bulk update failed:', id, error);
+        results[i] = { id, ok: false, error: 'Update failed' };
+      }
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(5, ids.length) }, () => worker()));
+  const success = results.filter(x => x && x.ok).length;
+  return json({
+    action: payload.action,
+    success,
+    failed: ids.length - success,
+    results
+  }, success === 0 ? 422 : 200);
+}
