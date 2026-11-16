@@ -139,7 +139,8 @@ async function loadPage(reset=false){
     state.complete=Boolean(r.list_complete)||!state.cursor;
     render();
     $('status').textContent=state.complete?'已经读取全部记录。':'还有未加载的素材；如需跨页选择，请使用「选择全部匹配结果」。';
-  }catch(e){toast(e.message);$('status').textContent='加载失败：'+e.message;}
+    return true;
+  }catch(e){toast(e.message);$('status').textContent='加载失败：'+e.message;return false;}
   finally{state.busy=false;$('loadMore').disabled=state.complete;}
 }
 function filterItems(){
@@ -260,8 +261,8 @@ async function selectAllMatching(){
   if(!confirm('将读取全部剩余页面并选中匹配当前筛选条件的素材。素材很多时可能需要较多请求，确定吗？'))return;
   let pages=0;
   while(!state.complete&&pages<100){
-    await loadPage();pages++;
-    if(state.busy)break;
+    const loaded=await loadPage();pages++;
+    if(!loaded)break;
   }
   for(const x of filterItems())state.selected.add(x.id);
   render();
