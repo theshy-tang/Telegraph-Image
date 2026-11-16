@@ -110,6 +110,15 @@ body.working button[data-action]{opacity:.6}
 @media(max-width:540px){h1{font-size:25px}.stats{grid-template-columns:repeat(2,1fr);gap:10px}.stat{padding:17px}.panel{padding:16px}.grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}.media{height:144px}.top{gap:10px}.bulkbar{top:0}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}
 
+
+/* Performance pass: avoid full-image zoom/repaint on every hover. */
+.tile{contain:layout style;transition:border-color .15s ease,box-shadow .15s ease!important}
+.tile:hover{transform:none!important;border-color:#d9e3f3;box-shadow:0 7px 22px rgba(57,74,113,.1)}
+.tile.picked{transform:none!important}
+.media img,.media video{transform:none!important;transition:opacity .16s ease!important;will-change:auto!important}
+.tile:hover .media img,.tile:hover .media video{transform:none!important}
+.video-mark{position:absolute;display:grid;place-items:center;width:42px;height:42px;left:50%;top:50%;transform:translate(-50%,-50%);border-radius:50%;background:rgba(255,255,255,.88);color:#526d9c;font-size:17px;box-shadow:0 4px 15px #1c305426;pointer-events:none}
+
 </style>
 </head>
 <body>
@@ -166,7 +175,7 @@ body.working button[data-action]{opacity:.6}
 (() => {
 'use strict';
 const $ = id => document.getElementById(id);
-const state = { auth:null,items:[],seen:new Set(),selected:new Set(),cursor:null,complete:false,busy:false,chip:'all',view:'all',limit:100 };
+const state = { auth:null,items:[],seen:new Set(),selected:new Set(),cursor:null,complete:false,busy:false,chip:'all',view:'all',limit:100,tiles:new Map() };
 const IMG = /\.(png|jpe?g|gif|webp|bmp|tiff?|ico|avif|apng)$/i;
 const VID = /\.(mp4|webm|mov|ogg|m4v|mkv|avi)$/i;
 const safeText = v => String(v ?? '');
@@ -195,7 +204,7 @@ async function loadPage(reset=false){
   if(state.busy)return;
   state.busy=true;$('loadMore').disabled=true;$('status').textContent='读取中...';
   try{
-    if(reset){state.items=[];state.seen.clear();state.cursor=null;state.complete=false;state.selected.clear();}
+    if(reset){state.items=[];state.seen.clear();state.cursor=null;state.complete=false;state.selected.clear();state.tiles.clear();$('grid').replaceChildren();}
     const p=new URLSearchParams({limit:String(state.limit)});
     if(state.cursor)p.set('cursor',state.cursor);
     const r=await api('/api/manage/list?'+p);
@@ -222,52 +231,98 @@ function filterItems(){
   return result;
 }
 function elt(tag,cls,text){const e=document.createElement(tag);if(cls)e.className=cls;if(text!==undefined)e.textContent=text;return e;}
+function updateSelectionUI(){
+  const count=state.selected.size;
+  $('selectedInfo').textContent=count?'● 已选中 '+count+' 项':'点击卡片查看大图 · 勾选后可批量操作';
+  $('selectedCount').textContent='已选 '+count+' 项';
+  $('bulkbar').classList.toggle('hidden',count===0);
+  const matches=filterItems();
+  $('selectPage').textContent=matches.length&&matches.every(x=>state.selected.has(x.id))?'取消全选当前结果':'✓ 全选当前结果';
+  for(const [id,tile] of state.tiles){
+    const checked=state.selected.has(id);
+    if(tile._check.checked!==checked)tile._check.checked=checked;
+    tile.classList.toggle('picked',checked);
+  }
+}
+function createTile(x){
+  const tile=elt('article','tile');tile.tabIndex=0;tile.setAttribute('aria-label','查看 '+x.name);
+  const media=elt('div','media');
+  if(x.type==='image'){
+    const img=elt('img');img.alt='';img.loading='lazy';img.decoding='async';img.fetchPriority='low';
+    img.src=fileUrl(x.id);
+    const fallback=elt('div','broken hidden');
+    fallback.append(elt('span','broken-icon','⚠'),elt('span','broken-label','图片暂时无法加载'));
+    const retry=elt('button','retry','重新加载');retry.type='button';
+    retry.addEventListener('click',e=>{e.stopPropagation();fallback.classList.add('hidden');img.classList.remove('hidden');img.src=fileUrl(x.id)+'?retry='+Date.now();});
+    fallback.append(retry);
+    img.addEventListener('error',()=>{img.classList.add('hidden');fallback.classList.remove('hidden');});
+    media.append(img,fallback);
+  }else if(x.type==='video'){
+    const video=elt('video');video.preload='none';video.muted=true;video.playsInline=true;
+    video.dataset.src=fileUrl(x.id);
+    // Metadata is loaded only when the user opens the full preview.
+    media.append(video,elt('span','video-mark','▶'));
+  }else media.append(elt('span','fileicon','▤'));
+  const check=elt('input','check');check.type='checkbox';check.setAttribute('aria-label','选择 '+x.name);
+  check.addEventListener('click',e=>e.stopPropagation());
+  check.addEventListener('change',()=>select(x.id,check.checked));media.append(check);
+  const tags=elt('div','tags');media.append(tags);tile.append(media);
+  const details=elt('div','details');
+  const filename=elt('div','filename',x.name),sub=elt('div','sub');
+  details.append(filename,sub);tile.append(details);
+  tile._check=check;tile._tags=tags;tile._filename=filename;tile._sub=sub;
+  tile.addEventListener('click',()=>{const latest=state.items.find(v=>v.id===x.id);if(latest)preview(latest);});
+  tile.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target===tile){const latest=state.items.find(v=>v.id===x.id);if(latest)preview(latest);}});
+  return tile;
+}
+function refreshTile(tile,x){
+  tile._filename.textContent=x.name;
+  tile._sub.textContent=[x.category||x.type.toUpperCase(),formatBytes(x.bytes),...x.albums.slice(0,1)].filter(Boolean).join(' · ');
+  tile._tags.replaceChildren();
+  if(x.liked)tile._tags.append(elt('span','overlay-tag','♡ 收藏'));
+  if(x.published)tile._tags.append(elt('span','overlay-tag','✧ AI'));
+}
 function render(){
-  const list=filterItems(),grid=$('grid');grid.replaceChildren();
+  const list=filterItems(),grid=$('grid');
   const albumSelect=$('albumFilter'),chosen=albumSelect.value;
   const albums=[...new Set(state.items.flatMap(x=>x.albums))].sort((a,b)=>a.localeCompare(b,'zh-CN'));
-  albumSelect.replaceChildren(new Option('所有相册',''));for(const a of albums)albumSelect.add(new Option(a,a));
-  albumSelect.value=albums.includes(chosen)?chosen:'';
+  const signature=JSON.stringify(albums);
+  if(albumSelect.dataset.signature!==signature){
+    albumSelect.replaceChildren(new Option('所有相册',''));
+    for(const a of albums)albumSelect.add(new Option(a,a));
+    albumSelect.value=albums.includes(chosen)?chosen:'';
+    albumSelect.dataset.signature=signature;
+  }
   $('resultCount').textContent='当前匹配 '+list.length+' 项 · 已加载 '+state.items.length+' 项';
   $('statAll').textContent=state.items.length;
   $('statFavorite').textContent=state.items.filter(x=>x.liked).length;
   $('statAI').textContent=state.items.filter(x=>x.published).length;
-  $('selectedInfo').textContent=state.selected.size?'● 已选中 '+state.selected.size+' 项':'点击卡片查看大图 · 勾选后可批量操作';
-  $('selectedCount').textContent='已选 '+state.selected.size+' 项';
-  $('bulkbar').classList.toggle('hidden',state.selected.size===0);
   $('loadMore').classList.toggle('hidden',state.complete);
   $('selectAllMatched').classList.toggle('hidden',state.complete);
-  $('selectPage').textContent=list.length&&list.every(x=>state.selected.has(x.id))?'取消全选当前结果':'✓ 全选当前结果';
-  if(!list.length){grid.append(elt('div','empty','没有匹配的素材。请调整搜索或筛选条件。'));return;}
+  if(!list.length){
+    grid.replaceChildren(elt('div','empty','没有匹配的素材。请调整搜索或筛选条件。'));
+    updateSelectionUI();return;
+  }
   const frag=document.createDocumentFragment();
   for(const x of list){
-    const tile=elt('article','tile'+(state.selected.has(x.id)?' picked':''));tile.tabIndex=0;tile.setAttribute('aria-label','查看 '+x.name);
-    const media=elt('div','media');
-    if(x.type==='image'){
-      const img=elt('img');img.src=fileUrl(x.id);img.alt=x.name;img.loading='lazy';img.decoding='async';
-      const fallback=elt('div','broken hidden');fallback.append(elt('span','broken-icon','⚠'),elt('span','broken-label','图片暂时无法加载'));
-      const retry=elt('button','retry','重新加载');retry.type='button';retry.addEventListener('click',e=>{e.stopPropagation();fallback.classList.add('hidden');img.classList.remove('hidden');img.src=fileUrl(x.id)+'?retry='+Date.now();});fallback.append(retry);
-      img.addEventListener('error',()=>{img.classList.add('hidden');fallback.classList.remove('hidden');});
-      media.append(img,fallback);
-    }else if(x.type==='video'){
-      const v=elt('video');v.src=fileUrl(x.id);v.preload='metadata';v.muted=true;v.playsInline=true;media.append(v);
-    }else media.append(elt('span','fileicon','▤'));
-    const check=elt('input','check');check.type='checkbox';check.checked=state.selected.has(x.id);check.setAttribute('aria-label','选择 '+x.name);
-    check.addEventListener('click',e=>e.stopPropagation());check.addEventListener('change',()=>select(x.id,check.checked));
-    media.append(check);
-    const tags=elt('div','tags');
-    if(x.liked)tags.append(elt('span','overlay-tag','♡ 收藏'));
-    if(x.published)tags.append(elt('span','overlay-tag','✧ AI'));
-    media.append(tags);tile.append(media);
-    const details=elt('div','details');details.append(elt('div','filename',x.name));
-    details.append(elt('div','sub',[x.category||x.type.toUpperCase(),formatBytes(x.bytes),...x.albums.slice(0,1)].filter(Boolean).join(' · ')));
-    tile.append(details);tile.addEventListener('click',()=>preview(x));tile.addEventListener('keydown',e=>{if(e.key==='Enter')preview(x);});
+    let tile=state.tiles.get(x.id);
+    if(!tile){tile=createTile(x);state.tiles.set(x.id,tile);}
+    refreshTile(tile,x);
     frag.append(tile);
   }
-  grid.append(frag);
+  grid.replaceChildren(frag);
+  // Reuse recent card nodes while keeping memory bounded for larger libraries.
+  if(state.tiles.size>320){
+    const visible=new Set(list.map(x=>x.id));
+    for(const id of state.tiles.keys()){
+      if(state.tiles.size<=320)break;
+      if(!visible.has(id))state.tiles.delete(id);
+    }
+  }
+  updateSelectionUI();
 }
 function formatBytes(n){return n>=1048576?(n/1048576).toFixed(1)+' MB':n>=1024?(n/1024).toFixed(1)+' KB':n+' B';}
-function select(id,checked){checked?state.selected.add(id):state.selected.delete(id);render();}
+function select(id,checked){checked?state.selected.add(id):state.selected.delete(id);updateSelectionUI();}
 function setChip(chip){
   state.chip=chip;document.querySelectorAll('.chip').forEach(el=>el.classList.toggle('on',el.dataset.chip===chip));
   document.querySelectorAll('.nav').forEach(el=>el.classList.toggle('active',el.dataset.view===chip||chip==='all'&&el.dataset.view==='all'));
@@ -337,7 +392,7 @@ async function selectAllMatching(){
     if(!loaded)break;
   }
   for(const x of filterItems())state.selected.add(x.id);
-  render();
+  updateSelectionUI();
   $('status').textContent='已经选中 '+state.selected.size+' 项。'+(!state.complete?' 为限制请求，最多自动加载 100 页；还有记录未加载。':'');
 }
 async function upload(files){
@@ -381,7 +436,7 @@ $('loginForm').addEventListener('submit',async e=>{
   }catch(err){$('loginError').textContent=err.message;}
 });
 $('reload').addEventListener('click',()=>loadPage(true));
-$('search').addEventListener('input',render);
+let searchTimer; $('search').addEventListener('input',()=>{clearTimeout(searchTimer);searchTimer=setTimeout(render,110);});
 $('albumFilter').addEventListener('change',render);
 $('order').addEventListener('change',render);
 $('chips').addEventListener('click',e=>{const b=e.target.closest('[data-chip]');if(b)setChip(b.dataset.chip);});
@@ -391,9 +446,9 @@ document.querySelectorAll('.nav').forEach(b=>b.addEventListener('click',()=>{
 }));
 $('selectPage').addEventListener('click',()=>{
   const matches=filterItems();const all=matches.every(x=>state.selected.has(x.id));
-  matches.forEach(x=>all?state.selected.delete(x.id):state.selected.add(x.id));render();
+  matches.forEach(x=>all?state.selected.delete(x.id):state.selected.add(x.id));updateSelectionUI();
 });
-$('clearSelection').addEventListener('click',()=>{state.selected.clear();render();});
+$('clearSelection').addEventListener('click',()=>{state.selected.clear();updateSelectionUI();});
 $('bulkbar').addEventListener('click',e=>{const b=e.target.closest('[data-action]');if(b)runAction(b.dataset.action);});
 $('loadMore').addEventListener('click',()=>loadPage());
 $('selectAllMatched').addEventListener('click',selectAllMatching);
