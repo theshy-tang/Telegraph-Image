@@ -44,7 +44,10 @@ export async function onRequest({ request, params }) {
     upstream = await fetch(url, {
       method: request.method,
       headers,
-      redirect: 'follow'
+      redirect: 'follow',
+      // Images are public Shopify assets. Cache the upstream response at the edge
+      // so switching gallery views does not repeatedly fetch large Telegram files.
+      cf: { cacheEverything: true, cacheTtl: 3600 }
     });
   } catch (error) {
     console.error('Media preview proxy error', error);
@@ -60,7 +63,7 @@ export async function onRequest({ request, params }) {
   }
   const out = new Headers({
     'Content-Type': type,
-    'Cache-Control': 'public, max-age=300',
+    'Cache-Control': 'public, max-age=3600, stale-while-revalidate=86400',
     'X-Content-Type-Options': 'nosniff',
     'Cross-Origin-Resource-Policy': 'same-origin'
   });
