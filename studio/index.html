@@ -293,8 +293,18 @@ $('loginForm').addEventListener('submit',async e=>{
   const candidate=btoa(binary);
   try{
     const response=await fetch('/api/manage/list?limit=1',{headers:{'Authorization':'Basic '+candidate},cache:'no-store'});
-    if(!response.ok)throw Error('登录验证未通过：HTTP '+response.status);
-    const json=await response.json();if(!Array.isArray(json.keys))throw Error('KV 图床后台不可用');
+    if(!response.ok){
+      if(response.status===401)throw Error('用户名或密码错误，或当前 Preview 环境未配置 BASIC_USER / BASIC_PASS。');
+      throw Error('后台连接失败：HTTP '+response.status);
+    }
+    const body=await response.text();
+    if(body.startsWith('Dashboard is disabled')){
+      throw Error('当前 Cloudflare 环境未绑定 img_url KV。请在 Pages → 设置 → 绑定 → Preview 添加 img_url 绑定，然后重新部署。');
+    }
+    let json;
+    try{json=JSON.parse(body);}
+    catch{throw Error('后台返回的不是 JSON，请检查 Preview 的 KV 绑定和 Pages Functions。响应开头：'+body.slice(0,70));}
+    if(!Array.isArray(json.keys))throw Error('图床后台返回的数据格式不正确，请检查 KV 配置。');
     state.auth=candidate;$('pass').value='';$('auth').classList.add('hidden');$('app').classList.remove('hidden');await loadPage();
   }catch(err){$('loginError').textContent=err.message;}
 });
