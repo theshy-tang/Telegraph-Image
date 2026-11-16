@@ -135,5 +135,5 @@ export async function onRequestPost(context) {
     success,
     failed: ids.length - success,
     results
-  }, success === 0 ? 422 : 200);
+  });
 }
