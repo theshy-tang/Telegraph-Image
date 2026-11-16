@@ -108,7 +108,9 @@ const VID = /\.(mp4|webm|mov|ogg|m4v|mkv|avi)$/i;
 const safeText = v => String(v ?? '');
 const getType = id => IMG.test(id) ? 'image' : VID.test(id) ? 'video' : 'other';
 const isSafeId = id => /^[A-Za-z0-9_-]{5,300}\.[A-Za-z0-9]{2,12}$/.test(id);
-const fileUrl = id => '/file/' + encodeURIComponent(id);
+const IS_PREVIEW = location.hostname.endsWith('.my-image-bed.pages.dev') && location.hostname !== 'my-image-bed.pages.dev';
+const FILE_ORIGIN = IS_PREVIEW ? 'https://my-image-bed.pages.dev' : location.origin;
+const fileUrl = id => FILE_ORIGIN + '/file/' + encodeURIComponent(id);
 function toast(message){$('toast').textContent=message;$('toast').style.display='block';clearTimeout(toast.timer);toast.timer=setTimeout(()=>$('toast').style.display='none',4200);}
 function authHeader(){return {'Authorization': 'Basic '+state.auth};}
 async function api(url,options={}){
@@ -211,7 +213,7 @@ function preview(x){
   for(const [label,val] of [['文件名',x.name],['文件大小',formatBytes(x.bytes)],['类型',x.type],['收藏',x.liked?'是':'否'],['AI 发布',x.published?'已发布':'未发布'],['标签',x.tags.join('、')||'无'],['相册',x.albums.join('、')||'无'],['分类',x.category||'无']]){
     const line=elt('div');line.append(elt('strong','',label+'：'),document.createTextNode(safeText(val)));info.append(line);
   }
-  const btn=elt('button','primary','复制真实链接');btn.addEventListener('click',async()=>{try{await navigator.clipboard.writeText(location.origin+fileUrl(x.id));toast('已复制图片链接');}catch{toast('无法复制，请检查浏览器权限');}});
+  const btn=elt('button','primary','复制真实链接');btn.addEventListener('click',async()=>{try{await navigator.clipboard.writeText(fileUrl(x.id));toast('已复制图片链接');}catch{toast('无法复制，请检查浏览器权限');}});
   info.append(btn);$('preview').showModal();
 }
 function actionPayload(action){
@@ -305,7 +307,7 @@ $('loginForm').addEventListener('submit',async e=>{
     try{json=JSON.parse(body);}
     catch{throw Error('后台返回的不是 JSON，请检查 Preview 的 KV 绑定和 Pages Functions。响应开头：'+body.slice(0,70));}
     if(!Array.isArray(json.keys))throw Error('图床后台返回的数据格式不正确，请检查 KV 配置。');
-    state.auth=candidate;$('pass').value='';$('auth').classList.add('hidden');$('app').classList.remove('hidden');await loadPage();
+    state.auth=candidate;$('pass').value='';$('auth').classList.add('hidden');$('app').classList.remove('hidden');if(IS_PREVIEW){$('uploadBtn').disabled=true;$('uploadBtn').title='预览环境仅同步正式图片目录，不允许上传，避免测试数据和真实 Telegram 存储混用';}await loadPage();
   }catch(err){$('loginError').textContent=err.message;}
 });
 $('reload').addEventListener('click',()=>loadPage(true));
