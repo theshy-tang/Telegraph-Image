@@ -85,7 +85,7 @@ dialog{border:1px solid #e9edf5;border-radius:18px;box-shadow:0 30px 100px #1320
 <div class="heading"><div><h2>素材资源管理</h2><div class="muted" id="resultCount" style="margin-top:5px">加载中...</div></div><button id="selectPage" class="ghost">✓ 全选当前结果</button></div>
 <div class="toolbar"><input id="search" class="search" placeholder="⌕ 搜索文件名、标签、相册..." aria-label="搜索素材"><select id="albumFilter"><option value="">所有相册</option></select><select id="order"><option value="new">最新上传</option><option value="old">最早上传</option><option value="name">名称排序</option></select></div>
 <div class="filterbar"><div class="toolbar" id="chips"><button data-chip="all" class="chip on">全部</button><button data-chip="image" class="chip">图片</button><button data-chip="video" class="chip">视频</button><button data-chip="favorites" class="chip">收藏</button><button data-chip="published" class="chip">AI 已发布</button></div><span class="muted" id="selectedInfo">未选择</span></div>
-<div id="bulkbar" class="bulkbar hidden"><span class="count" id="selectedCount">已选择 0 项</span><button data-action="favorite">♡ 收藏</button><button data-action="unfavorite">取消收藏</button><button data-action="add_tags">＋ 标签</button><button data-action="add_albums">▤ 相册</button><button data-action="publish">✧ 发布 AI</button><button data-action="unpublish">撤销 AI 发布</button><button id="clearSelection">清除选择</button></div>
+<div id="bulkbar" class="bulkbar hidden"><span class="count" id="selectedCount">已选择 0 项</span><button data-action="favorite">♡ 收藏</button><button data-action="unfavorite">取消收藏</button><button data-action="add_tags">＋ 标签</button><button data-action="remove_tags">－ 标签</button><button data-action="add_albums">＋ 相册</button><button data-action="remove_albums">－ 相册</button><button data-action="set_category">分类</button><button data-action="publish">✧ 发布 AI</button><button data-action="unpublish">撤销 AI 发布</button><button id="clearSelection">清除选择</button></div>
 <div id="grid" class="grid" aria-live="polite"></div>
 <div class="bottom-actions">
 <button id="loadMore" class="ghost">加载更多素材</button>
@@ -214,9 +214,13 @@ function preview(x){
   info.append(btn);$('preview').showModal();
 }
 function actionPayload(action){
-  if(action==='add_tags'||action==='add_albums'){
-    const label=action==='add_tags'?'标签':'相册';
-    const raw=prompt('输入要批量添加的'+label+'，多个用英文逗号分隔：');
+  if(action==='set_category'){
+    const category=prompt('为所选素材设置统一分类（留空可清除分类）：');
+    return category===null?null:{category:category.trim()};
+  }
+  if(action==='add_tags'||action==='remove_tags'||action==='add_albums'||action==='remove_albums'){
+    const label=action.includes('tags')?'标签':'相册';
+    const raw=prompt('输入要批量'+(action.startsWith('remove')?'移除':'添加')+'的'+label+'，多个用英文逗号分隔：');
     if(raw===null)return null;
     const names=raw.split(',').map(x=>x.trim()).filter(Boolean);
     if(!names.length)return null;
