@@ -3,7 +3,7 @@
  * Install at: functions/api/shopify-assets.js
  * Route: GET /api/shopify-assets
  *
- * Only exposes images explicitly marked "liked" in the existing admin grid.
+ * Only exposes images explicitly published with aiPublished=true in Media Studio.
  * No credentials or raw KV values are returned.
  */
 
@@ -59,7 +59,7 @@ export async function onRequest(context) {
     const id = key?.name;
     const metadata = key?.metadata || {};
     if (typeof id !== 'string' || INTERNAL_KEY.test(id) || !IMAGE_FILE.test(id)) continue;
-    if (metadata.liked !== true) continue;
+    if (metadata.aiPublished !== true) continue;
     if (metadata.ListType === 'Block' || metadata.Label === 'adult') continue;
     if (env.WhiteList_Mode === 'true' && metadata.ListType !== 'White') continue;
 
@@ -72,7 +72,17 @@ export async function onRequest(context) {
       ? new Date(ms).toISOString()
       : null;
 
+    const tags = Array.isArray(metadata.tags)
+      ? metadata.tags.filter(tag => typeof tag === 'string').slice(0, 30)
+      : [];
+    const albums = Array.isArray(metadata.albums)
+      ? metadata.albums.filter(album => typeof album === 'string').slice(0, 30)
+      : [];
+
     items.push({
+      tags,
+      albums,
+      category: typeof metadata.category === 'string' ? metadata.category : '',
       filename: filename || id,
       url: `${origin}/file/${encodeURIComponent(id)}`,
       type: `image/${id.split('.').pop().toLowerCase().replace('jpg', 'jpeg')}`,
