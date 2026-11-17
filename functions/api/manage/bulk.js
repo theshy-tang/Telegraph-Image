@@ -1,3 +1,4 @@
+import {parseAssetDetails,ASSET_FIELDS} from '../../utils/studio-asset-details.js';
 import {metadataD1Enabled,readStudioMetadata,mutateStudioMetadata} from '../../utils/studio-metadata.js';
 import {hasStudioD1,getStudioFolder,getStudioMediaFolders} from '../../utils/studio-d1.js';
 /**
@@ -40,7 +41,7 @@ function safeStringList(value) {
 function transform(metadata, payload) {
   const next = { ...metadata };
   const action = payload.action;
-  if(action==='edit_details'){next.fileName=payload.fileName;next.category=payload.category;next.tags=payload.tags;}
+  if(action==='edit_details'){next.fileName=payload.fileName;next.category=payload.category;next.tags=payload.tags;Object.assign(next,payload.assetDetails);}
   if (action === 'favorite') next.liked = true;
   if (action === 'unfavorite') next.liked = false;
   if (action === 'publish') {
@@ -102,6 +103,7 @@ export async function onRequestPost(context) {
     if(!name||name.length>160||/[\u0000-\u001f\u007f<>]/.test(name)||!tags ||
       typeof payload.category!=='string'||payload.category.length>48||/[\u0000-\u001f\u007f<>]/.test(payload.category))
       return json({error:'Invalid media details'},400);
+    try{payload.assetDetails=parseAssetDetails(payload);}catch{return json({error:'Invalid description, source URL or prompt'},400);}
     payload.fileName=name;payload.tags=tags;payload.category=payload.category.trim();
   }
   const ids = [...new Set(payload.ids)];
@@ -137,6 +139,7 @@ export async function onRequestPost(context) {
     // Folder membership is authoritative in D1 when configured; never re-read
     // stale KV folderId values as the result of unrelated metadata edits.
     const d1=hasStudioD1(env),metadataD1=metadataD1Enabled(env);
+    if(!metadataD1&&payload.action==='edit_details'&&Object.keys(payload.assetDetails).length)return json({error:'Asset details require D1 metadata storage'},503);
     if(metadataD1&&payload.action==='edit_details'&&(!Number.isInteger(payload.metadataVersion)||payload.metadataVersion<0))return json({error:'Reload media details before saving'},409);
     const memberships=d1 ? await getStudioMediaFolders(env.MEDIA_STUDIO_DB,ids) : new Map();
     let position = 0;
@@ -170,6 +173,7 @@ export async function onRequestPost(context) {
           }
           results[i] = { id, ok: true, metadata: {
             metadataVersion: updated.metadataVersion,
+            ...Object.fromEntries(ASSET_FIELDS.filter(k=>typeof updated[k]==='string').map(k=>[k,updated[k]])),
             fileName: updated.fileName || id,
           liked: updated.liked === true,
             aiPublished: updated.aiPublished === true,

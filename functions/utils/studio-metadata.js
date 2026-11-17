@@ -1,3 +1,4 @@
+import {ASSET_FIELDS} from './studio-asset-details.js';
 import {hasStudioD1} from './studio-d1.js';
 
 export function metadataD1Enabled(env){
@@ -8,7 +9,7 @@ export function metadataD1Enabled(env){
 export function editableMetadata(m,id){
   return {fileName:typeof m.fileName==='string'?m.fileName:id,liked:m.liked===true,aiPublished:m.aiPublished===true,
     tags:Array.isArray(m.tags)?m.tags.filter(x=>typeof x==='string'):[],
-    albums:Array.isArray(m.albums)?m.albums.filter(x=>typeof x==='string'):[],category:typeof m.category==='string'?m.category:''};
+    albums:Array.isArray(m.albums)?m.albums.filter(x=>typeof x==='string'):[],category:typeof m.category==='string'?m.category:'',...Object.fromEntries(ASSET_FIELDS.filter(k=>typeof m[k]==='string').map(k=>[k,m[k]]))};
 }
 function conflict(code){const error=new Error(code);error.code=code;return error;}
 export async function seedStudioMetadata(db,id,base){

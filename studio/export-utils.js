@@ -7,7 +7,7 @@
   stem=Array.from(stem).slice(0,120).join('')||'media';if(/^(con|prn|aux|nul|com[1-9]|lpt[1-9])$/i.test(stem.split('.')[0]))stem='_'+stem;return stem+ext;
  }
  function csv(records){
-  const columns=['id','fileName','type','sizeBytes','uploadedAt','tags','albums','category','folderId','folderPath','liked','aiPublished','metadataVersion','url'];
+  const columns=['id','fileName','type','sizeBytes','uploadedAt','tags','albums','category','folderId','folderPath','liked','aiPublished','metadataVersion','url','description','sourceUrl','prompt'];
   const cell=value=>{let s=Array.isArray(value)?JSON.stringify(value):String(value??'');if(/^[\s\u0000-\u001f]*[=+@-]/.test(s)||/^[\t\r\n]/.test(s))s="'"+s;return '"'+s.replace(/"/g,'""')+'"';};
   return '\ufeff'+[columns.map(cell).join(','),...records.map(r=>columns.map(k=>cell(r[k])).join(','))].join('\r\n');
  }

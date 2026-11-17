@@ -29,8 +29,8 @@ export async function onRequestGet({request,env}){
     const where=['COALESCE(m.deleted,0)=0'],params=[];
     if(s.q){
       const pattern='%'+s.q.replace(/[\\%_]/g,'\\$&')+'%';
-      where.push(`(i.media_id LIKE ? ESCAPE '\\' OR ${NAME} LIKE ? ESCAPE '\\' OR json_extract(${DOC},'$.category') LIKE ? ESCAPE '\\' OR EXISTS (SELECT 1 FROM json_each(${DOC},'$.tags') t WHERE t.value LIKE ? ESCAPE '\\') OR EXISTS (SELECT 1 FROM json_each(${DOC},'$.albums') a WHERE a.value LIKE ? ESCAPE '\\'))`);
-      params.push(pattern,pattern,pattern,pattern,pattern);
+      where.push(`(i.media_id LIKE ? ESCAPE '\\' OR ${NAME} LIKE ? ESCAPE '\\' OR json_extract(${DOC},'$.category') LIKE ? ESCAPE '\\' OR json_extract(${DOC},'$.description') LIKE ? ESCAPE '\\' OR json_extract(${DOC},'$.sourceUrl') LIKE ? ESCAPE '\\' OR json_extract(${DOC},'$.prompt') LIKE ? ESCAPE '\\' OR EXISTS (SELECT 1 FROM json_each(${DOC},'$.tags') t WHERE t.value LIKE ? ESCAPE '\\') OR EXISTS (SELECT 1 FROM json_each(${DOC},'$.albums') a WHERE a.value LIKE ? ESCAPE '\\'))`);
+      params.push(pattern,pattern,pattern,pattern,pattern,pattern,pattern,pattern);
     }
     if(s.tag){where.push(`EXISTS (SELECT 1 FROM json_each(${DOC},'$.tags') t WHERE t.value=?)`);params.push(s.tag);}
     if(s.album){where.push(`EXISTS (SELECT 1 FROM json_each(${DOC},'$.albums') a WHERE a.value=?)`);params.push(s.album);}

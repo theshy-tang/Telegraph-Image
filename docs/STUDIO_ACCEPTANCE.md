@@ -70,3 +70,11 @@ The local fixture server now also uses ephemeral Miniflare R2. Logged in with it
 - Browser fixture on a separate local server: 109 KV media, initially only 108 inventory rows. Exact search for Index repair fixture initially 0. Manual scan completed 2 pages/109 media and added 1 inventory record. Current index 109; exact search 1. Reload/relogin preserved the completed checkpoint; repeat full scan changed 0.
 - Checkpoint interruption and uncertain-outcome retries were exercised in UI regression tests; the browser acceptance covered completed-checkpoint restore, not a forced network outage mid-page.
 - No real Preview user records were used for scan writes. Tool is manually started, then paginates automatically; no scheduled job. It requires the already-ready catalog. KV eventual consistency means repeated scans may be needed for concurrent external writes; absence never triggers deletion.
+
+
+## Private asset descriptions and prompts — 2026-11-17
+
+- Complete suite: 238 passing. Eleven new regressions exercise multiline preservation/limits/clearing, source URL validation and no credentials, D1-only writes, optional old payloads, unrelated/global-tag mutations, stale drafts, new-field search, public catalog privacy and authenticated exports.
+- Actual local browser edited a disposable R2 sample description, source URL and multiline prompt. Favoriting during the draft retained all input. Save persisted fields across reload/relogin; full-library keyword search found the prompt. A confirmed-response mapping bug found by browser was fixed and now has a regression; repeat save retained the displayed prompt.
+- Browser downloaded admin JSON; disk readback verified description, sourceUrl and prompt exactly. CSV now has 17 columns (3 appended private fields); prior 14-column acceptance above describes the earlier version.
+- Public catalog regression publishes a fixture and checks none of these fields or sentinel contents appear. No new AI calls/services. Local acceptance does not imply editing any real Preview/Production record.
