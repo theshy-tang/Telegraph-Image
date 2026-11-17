@@ -191,6 +191,7 @@ body.working button[data-action]{opacity:.6}
 
 .folderbar .ghost.deleting{color:#476a9f;background:#eaf0fb;border-color:#bed0ec;cursor:progress;min-width:132px}
 .folderbar .ghost.deleting:disabled{opacity:1}
+.tag-choices{display:flex;flex-wrap:wrap;gap:8px;max-height:240px;overflow:auto;padding:4px}.tag-choice{display:flex;align-items:center;gap:6px;border:1px solid #dfe5f1;border-radius:12px;padding:8px 10px;cursor:pointer}.tag-choice input{width:auto;margin:0}.tag-choice:has(input:checked){background:#edf2ff;border-color:#7899ea}
 </style>
 </head>
 <body>
@@ -243,7 +244,7 @@ body.working button[data-action]{opacity:.6}
 <section class="panel">
 <div id="childFolders" class="child-folder-region hidden" aria-label="当前相册的子文件夹"></div>
 <div class="heading"><div><h2>素材资源管理</h2><div class="muted" id="resultCount" style="margin-top:5px">加载中...</div></div><button id="selectPage" class="ghost">✓ 全选当前结果</button></div>
-<div class="toolbar"><input id="search" class="search" placeholder="⌕ 搜索文件名、标签、相册..." aria-label="搜索素材"><select id="albumFilter" title="旧版标签式相册（兼容旧数据）"><option value="">旧版相册标签</option></select><select id="order"><option value="new">最新上传</option><option value="old">最早上传</option><option value="name">名称排序</option></select></div>
+<div class="toolbar"><input id="search" class="search" placeholder="⌕ 搜索文件名、标签、相册..." aria-label="搜索素材"><select id="tagFilter" aria-label="按标签筛选"><option value="">全部标签</option></select><select id="albumFilter" title="旧版标签式相册（兼容旧数据）"><option value="">旧版相册标签</option></select><select id="order"><option value="new">最新上传</option><option value="old">最早上传</option><option value="name">名称排序</option></select></div>
 <div class="filterbar"><div class="toolbar" id="chips"><button data-chip="all" class="chip on">全部</button><button data-chip="image" class="chip">图片</button><button data-chip="video" class="chip">视频</button><button data-chip="favorites" class="chip">收藏</button><button data-chip="published" class="chip">AI 已发布</button></div><span class="muted" id="selectedInfo">未选择</span></div>
 <div id="bulkbar" class="bulkbar hidden"><span class="count" id="selectedCount">已选择 0 项</span><button data-action="favorite">♡ 收藏</button><button data-action="unfavorite">取消收藏</button><button data-action="add_tags">＋ 标签</button><button data-action="remove_tags">－ 标签</button><button data-action="move_folder">▤ 移入相册</button><button data-action="clear_folder">移出相册</button><button data-action="set_category">分类</button><button data-action="publish">✧ 发布 AI</button><button data-action="unpublish">撤销 AI 发布</button><button id="clearSelection">清除选择</button></div>
 <div id="grid" class="grid" aria-live="polite"></div>
@@ -275,6 +276,19 @@ body.working button[data-action]{opacity:.6}
 </div>
 <div class="folder-dialog-actions"><button type="button" class="ghost" id="folderMoveCancel">取消</button><button type="button" class="primary" id="folderMoveSave">确认移动</button></div>
 </dialog>
+<dialog id="tagDialog" class="folder-dialog" aria-labelledby="tagDialogTitle">
+<form id="tagForm">
+<div class="modalhead"><strong id="tagDialogTitle">批量管理标签</strong><button type="button" class="close" id="tagClose" aria-label="关闭标签面板">×</button></div>
+<div class="folder-fields">
+<p id="tagSummary" class="muted"></p>
+<label for="tagSearch">查找已有标签</label><input id="tagSearch" placeholder="输入标签关键词">
+<div id="tagChoices" class="tag-choices" role="group" aria-label="已有标签"></div>
+<label for="tagNames" id="tagNamesLabel">新增标签</label><input id="tagNames" placeholder="多个标签用逗号分隔" maxlength="750">
+<p class="muted" id="tagHint">每次最多 15 个标签，每个标签最多 48 字，每张素材最多 30 个。此操作不改变 AI 发布状态。</p>
+<p id="tagError" role="alert" class="notice"></p>
+</div>
+<div class="folder-dialog-actions"><button type="button" class="ghost" id="tagCancel">取消</button><button type="submit" class="primary" id="tagSave">应用标签</button></div>
+</form></dialog>
 <dialog id="preview"><div class="modalhead"><strong>文件预览</strong><button class="close" id="closePreview">✕</button></div><div class="modalbody"><div id="previewMedia"></div><div class="modalinfo" id="previewInfo"></div></div></dialog>
 <div id="toast" class="toast" role="status"></div>
 <script>
@@ -626,9 +640,10 @@ function openMoveDialog(){
 function closeDialogs(){if($('folderEditor').open)$('folderEditor').close();if($('folderMoveDialog').open)$('folderMoveDialog').close();}
 
 function filterItems(){
-  const q=$('search').value.trim().toLowerCase(),album=$('albumFilter').value;
+  const q=$('search').value.trim().toLowerCase(),album=$('albumFilter').value,tag=$('tagFilter').value;
   let result=state.items.filter(x=>inSelectedFolder(x)&&(state.chip==='all'||(state.chip==='favorites'?x.liked:state.chip==='published'?x.published:x.type===state.chip))
     &&(!album||x.albums.includes(album))
+    &&(!tag||x.tags.includes(tag))
     &&(!q||[x.name,x.id,x.category,...x.tags,...x.albums].join(' ').toLowerCase().includes(q)));
   if($('order').value==='old')result.sort((a,b)=>a.date-b.date);
   else if($('order').value==='name')result.sort((a,b)=>a.name.localeCompare(b.name,'zh-CN'));
@@ -689,6 +704,7 @@ function refreshTile(tile,x){
   if(x.folderId)tile._tags.append(elt('span','overlay-tag','▤'));
 }
 function render(){
+  updateTagFilter();
   const list=filterItems(),grid=$('grid');
   const albumSelect=$('albumFilter'),chosen=albumSelect.value;
   const albums=[...new Set(state.items.flatMap(x=>x.albums))].sort((a,b)=>a.localeCompare(b,'zh-CN'));
@@ -748,13 +764,69 @@ function preview(x){
   const btn=elt('button','primary','复制真实链接');btn.addEventListener('click',async()=>{try{await navigator.clipboard.writeText(publicFileUrl(x.id));toast('已复制图片链接');}catch{toast('无法复制，请检查浏览器权限');}});
   info.append(btn);$('preview').showModal();
 }
+const tagEditor={action:null,chosen:new Set()};
+function parseTagNames(raw){
+  const names=[...new Set(raw.split(/[,，\n]/).map(x=>x.trim()).filter(Boolean))];
+  if(names.length>15||names.some(x=>x.length>48||/[\u0000-\u001f\u007f<>]/.test(x)))throw Error('每次最多 15 个标签，每个不超过 48 字，不能包含控制字符或尖括号。');
+  return names;
+}
+function collectTagChoices(items,selected,action){
+  const counts=new Map();
+  for(const item of items){
+    if(action==='remove_tags'&&!selected.has(item.id))continue;
+    for(const tag of new Set(item.tags)){
+      const entry=counts.get(tag)||{name:tag,total:0,selected:0};
+      entry.total++;if(selected.has(item.id))entry.selected++;
+      counts.set(tag,entry);
+    }
+  }
+  return [...counts.values()].sort((a,b)=>a.name.localeCompare(b.name,'zh-CN'));
+}
+function updateTagFilter(){
+  const select=$('tagFilter'),chosen=select.value;
+  const names=collectTagChoices(state.items,state.selected,'add_tags').map(x=>x.name);
+  if(chosen&&!names.includes(chosen))names.push(chosen);
+  const signature=JSON.stringify(names);
+  if(select.dataset.signature!==signature){
+    select.replaceChildren(new Option('全部标签',''));
+    for(const name of names)select.add(new Option(name,name));
+    select.value=chosen;select.dataset.signature=signature;
+  }
+}
+function renderTagChoices(){
+  const zone=$('tagChoices'),q=$('tagSearch').value.trim().toLowerCase();zone.replaceChildren();
+  const choices=collectTagChoices(state.items,state.selected,tagEditor.action).filter(x=>x.name.toLowerCase().includes(q));
+  for(const tag of choices){
+    const label=elt('label','tag-choice'),input=elt('input');input.type='checkbox';input.checked=tagEditor.chosen.has(tag.name);
+    input.addEventListener('change',()=>{input.checked?tagEditor.chosen.add(tag.name):tagEditor.chosen.delete(tag.name);});
+    label.append(input,document.createTextNode(tag.name+' · 已选素材中 '+tag.selected+' 项'));zone.append(label);
+  }
+  if(!choices.length)zone.append(elt('span','muted',tagEditor.action==='remove_tags'?'所选素材暂无匹配的标签。':'暂无匹配标签，可以在下方新增。'));
+}
+function openTagDialog(action){
+  tagEditor.action=action;tagEditor.chosen.clear();
+  $('tagDialogTitle').textContent=action==='add_tags'?'批量添加标签':'批量移除标签';
+  $('tagSummary').textContent='已选 '+state.selected.size+' 项。'+(state.complete?'标签来自已加载素材。':'仅展示已加载素材的标签，可先加载更多素材。');
+  $('tagSearch').value='';$('tagNames').value='';$('tagError').textContent='';
+  $('tagNames').classList.toggle('hidden',action==='remove_tags');$('tagNamesLabel').classList.toggle('hidden',action==='remove_tags');
+  renderTagChoices();$('tagDialog').showModal();$('tagSearch').focus();
+}
+async function saveTags(event){
+  event.preventDefault();
+  try{
+    const raw=[...tagEditor.chosen,...(tagEditor.action==='add_tags'?parseTagNames($('tagNames').value):[])];
+    const names=[...new Set(raw)];
+    if(!names.length||names.length>15)throw Error('请选择或输入 1–15 个标签。');
+    $('tagDialog').close();await runAction(tagEditor.action,{names});
+  }catch(error){$('tagError').textContent=error.message;}
+}
 function actionPayload(action){
   if(action==='clear_folder')return {folderId:null};
   if(action==='set_category'){
     const category=prompt('为所选素材设置统一分类（留空可清除分类）：');
     return category===null?null:{category:category.trim()};
   }
-  if(action==='add_tags'||action==='remove_tags'||action==='add_albums'||action==='remove_albums'){
+  if(action==='add_albums'||action==='remove_albums'){
     const label=action.includes('tags')?'标签':'相册';
     const raw=prompt('输入要批量'+(action.startsWith('remove')?'移除':'添加')+'的'+label+'，多个用英文逗号分隔：');
     if(raw===null)return null;
@@ -766,13 +838,14 @@ function actionPayload(action){
 }
 async function runAction(action,override=null){
   if(state.busy||!state.selected.size)return;
+  if((action==='add_tags'||action==='remove_tags')&&override===null){openTagDialog(action);return;}
   if(action==='move_folder' && override===null){openMoveDialog();return;}
   const additional=override||actionPayload(action);if(additional===null)return;
   if(action==='clear_folder')action='move_folder';
   const ids=[...state.selected];
   if(action==='publish'&&!confirm('将 '+ids.length+' 个媒体标记为 AI 已发布。符合图片格式的文件会出现在无需登录的公开目录里，确认继续？'))return;
   state.busy=true;setBusyUI(true);
-  let ok=0,fail=0;const pending=new Set(ids);
+  let ok=0,fail=0;const pending=new Set(ids),failureMessages=new Set();
   try{
     for(let i=0;i<ids.length;i+=50){
       const chunk=ids.slice(i,i+50);
@@ -781,7 +854,7 @@ async function runAction(action,override=null){
       const results=new Map((r.results||[]).map(result=>[result.id,result]));
       for(const id of chunk){
         const result=results.get(id);
-        if(!result?.ok)continue;
+        if(!result?.ok){if(result?.error)failureMessages.add(result.error.includes('30 per file')?'素材标签已达上限（每张最多 30 个）':String(result.error).slice(0,160));continue;}
         pending.delete(id);ok++;
         const item=state.items.find(x=>x.id===result.id);if(!item)continue;
         item.liked=result.metadata.liked;item.published=result.metadata.aiPublished;
@@ -791,7 +864,7 @@ async function runAction(action,override=null){
     }
     fail=pending.size;
     state.selected=new Set(pending);
-    $('status').textContent='操作完成：成功 '+ok+' 项，失败 '+fail+' 项。'+(fail?'失败项目仍保持选中，可重试。':'');
+    $('status').textContent='操作完成：成功 '+ok+' 项，失败 '+fail+' 项。'+(fail?'失败项目仍保持选中，可重试。':'')+[...failureMessages].slice(0,3).join('；');
     toast('操作完成：成功 '+ok+' 项，失败 '+fail+' 项');
   }catch(e){toast('操作中断：'+e.message);$('status').textContent='已确认成功 '+ok+' 项；其余 '+pending.size+' 项保留选中，可重试。中断的请求可能已生效。';}
   finally{state.selected=new Set(pending);state.busy=false;setBusyUI(false);render();renderFolders();}
@@ -868,6 +941,11 @@ $('folderMoveSave').addEventListener('click',async()=>{
 });
 $('reload').addEventListener('click',()=>loadPage(true));
 let searchTimer; $('search').addEventListener('input',()=>{clearTimeout(searchTimer);searchTimer=setTimeout(render,110);});
+$('tagFilter').addEventListener('change',render);
+$('tagSearch').addEventListener('input',renderTagChoices);
+$('tagForm').addEventListener('submit',saveTags);
+$('tagClose').addEventListener('click',()=>$('tagDialog').close());
+$('tagCancel').addEventListener('click',()=>$('tagDialog').close());
 $('albumFilter').addEventListener('change',render);
 $('order').addEventListener('change',render);
 $('chips').addEventListener('click',e=>{const b=e.target.closest('[data-chip]');if(b)setChip(b.dataset.chip);});
@@ -880,7 +958,7 @@ $('clearSelection').addEventListener('click',()=>{state.selected.clear();updateS
 $('bulkbar').addEventListener('click',e=>{const b=e.target.closest('[data-action]');if(b)runAction(b.dataset.action);});
 $('loadMore').addEventListener('click',()=>loadPage());
 $('selectAllMatched').addEventListener('click',selectAllMatching);
-$('clearFilter').addEventListener('click',()=>{$('search').value='';$('albumFilter').value='';setChip('all');});
+$('clearFilter').addEventListener('click',()=>{$('search').value='';$('albumFilter').value='';$('tagFilter').value='';setChip('all');});
 $('closePreview').addEventListener('click',()=>$('preview').close());
 $('uploadBtn').addEventListener('click',()=>$('fileInput').click());
 $('fileInput').addEventListener('change',e=>{upload([...e.target.files]);e.target.value='';});

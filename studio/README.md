@@ -79,3 +79,12 @@
 - D1 migration `0002_media_studio_folder_guards.sql` protects directory structure at write time, including concurrent moves. It is currently applied only to the isolated Preview database.
 - Batch completion keeps only unsuccessful/unconfirmed items selected. On interruption, completed successes are excluded from the retry selection; failed and unsent items remain selected. A timed-out request may already have succeeded; repeat the same action to retry safely.
 - Run `npm test` for unit and local Miniflare D1 SQL integration tests. This does not replace authenticated browser acceptance.
+
+
+## 标签管理（2026-11-17）
+
+选择素材后点击「＋ 标签」或「－ 标签」打开标签面板，可搜索并勾选已有标签；添加时可输入新标签，支持中英文逗号或换行分隔。移除只作用于所选素材，不会全局删除标签。
+
+筛选栏新增「全部标签」下拉框，按完整标签精确匹配，并可与文件夹、搜索、媒体类型组合。标签列表来自已加载素材；如需查看全部标签，请先加载剩余页面。
+
+每次最多处理 15 个标签，每个标签最多 48 字，每张素材最多 30 个。超限保留原数据并提示失败；失败项保持选中。标签操作不会改变收藏或 AI 发布状态。

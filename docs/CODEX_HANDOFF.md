@@ -171,3 +171,12 @@ Codex 能回答以下问题才算完成接手：它知道当前分支/PR 与 Pro
 - Added Miniflare as an explicit pinned dev dependency and real SQL tests covering constraints, stale-read inverse moves, API lifecycle, nonempty delete protection and preserved KV media metadata. Full suite: 141 passing locally.
 - Bulk operations now remove only confirmed successes from retry selection. Failed, absent-result, interrupted and unsent IDs remain selected, including failures spanning multiple 50-item batches. Responses lost in transit are uncertain and safe to retry because operations set state.
 - Remaining: Unicode sibling equality at the database layer is narrower than the application locale comparison; KV metadata lost updates; legacy deletion membership cleanup; authenticated browser E2E; production upload/catalog rollout. No production migration or merge authorized/performed.
+
+
+## 2026-11-17 tag management panel
+
+- Replaced tag prompt interaction with a modal for add/remove, searchable existing tags, selection membership counts, and new tag input (English/Chinese commas or lines). Remove mode only lists tags found on selected loaded media; cancel sends no writes.
+- Added exact single-tag filtering alongside existing search, folder/hybrid browsing and type filters; clear filters resets the tag selection. Tag choices describe the loaded-data scope, without pretending to be a global KV index.
+- Preserves existing tags, folder membership, favorites and AI publication; no automatic publication. Backend now rejects an add that exceeds 30 tags per file instead of silently truncating new tags. Failure reason is visible and failed IDs remain selected.
+- Added regression tests for parsing/limits, add/remove payloads, mixed membership counts, exact filtering and metadata preservation on tag capacity failures. Full suite: 148 passing locally. UI/handler tests plus Miniflare integration; not authenticated browser acceptance.
+- Tags still use legacy KV metadata; concurrent KV lost updates remain unresolved. No production data/config changes or PR merge.

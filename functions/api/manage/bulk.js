@@ -48,7 +48,11 @@ function transform(metadata, payload) {
     next.aiPublished = true;
   }
   if (action === 'unpublish') next.aiPublished = false;
-  if (action === 'add_tags') next.tags = [...new Set([...safeStringList(next.tags), ...payload.names])].slice(0, 30);
+  if (action === 'add_tags') {
+    const tags = [...new Set([...safeStringList(next.tags), ...payload.names])];
+    if(tags.length>30){const error=new Error('Tag limit reached');error.code='TAG_LIMIT';throw error;}
+    next.tags=tags;
+  }
   if (action === 'remove_tags') next.tags = safeStringList(next.tags).filter(x => !payload.names.includes(x));
   if (action === 'add_albums') next.albums = [...new Set([...safeStringList(next.albums), ...payload.names])].slice(0, 30);
   if (action === 'remove_albums') next.albums = safeStringList(next.albums).filter(x => !payload.names.includes(x));
@@ -158,7 +162,7 @@ export async function onRequestPost(context) {
           } };
         } catch (error) {
           console.error('Media Studio bulk update failed:', id, error);
-          results[i] = { id, ok: false, error: 'Update failed' };
+          results[i] = { id, ok: false, error: error.code==='TAG_LIMIT'?'Tag limit reached (30 per file)':'Update failed' };
         }
       }
     }
