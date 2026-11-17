@@ -11,9 +11,9 @@ const {createStudioDB}=require('../studio-runtime');const {createMockKV}=require
  const exported=await import('../../functions/api/manage/export.js');const download=await import('../../functions/api/manage/download/[id].js');
  const catalog=await import('../../functions/utils/studio-catalog.js');
  // A fixture beyond the first 100 KV records makes unloaded-result acceptance reproducible.
- for(let n=0;n<105;n++)await env.img_url.put('fixture'+String(n).padStart(3,'0')+'.jpg','',{metadata:{fileName:'Fixture '+n,tags:['Fixture'],albums:[],TimeStamp:1700000000000+n}});
+ for(let n=0;n<Number(process.env.STUDIO_FIXTURE_MEDIA_COUNT||105);n++)await env.img_url.put('fixture'+String(n).padStart(3,'0')+'.jpg','',{metadata:{fileName:'Fixture '+n,tags:['Fixture'],albums:[],TimeStamp:1700000000000+n}});
  await env.img_url.put('zzzzz_target.jpg','',{metadata:{fileName:'Unloaded target',tags:['Global-only'],albums:[],TimeStamp:1700000000200}});
- for(const key of (await env.img_url.list({limit:1000})).keys)await catalog.indexStudioMedia(env,key.name,key.metadata);
+ let seedCursor;do{const page=await env.img_url.list({limit:100,...(seedCursor?{cursor:seedCursor}:{})});const statements=page.keys.map(k=>{const m=catalog.catalogMetadata(k.metadata,k.name);return runtime.db.prepare('INSERT INTO studio_media_inventory VALUES (?,?,?,?,?)').bind(k.name,catalog.catalogType(k.name),m.TimeStamp,JSON.stringify(m),Date.now());});if(statements.length)await runtime.db.batch(statements);seedCursor=page.list_complete?null:page.cursor;}while(seedCursor);
  await runtime.db.prepare('UPDATE studio_catalog_state SET ready=1 WHERE id=1').run();
  await env.img_url.put('unindexed.jpg','',{metadata:{fileName:'Index repair fixture.jpg',tags:['Index-repair'],TimeStamp:1700000000400}});
  const search=await import('../../functions/api/manage/search.js');const tags=await import('../../functions/api/manage/tags.js');
@@ -25,7 +25,7 @@ const {createStudioDB}=require('../studio-runtime');const {createMockKV}=require
   try{
    const url=new URL(req.url,'http://127.0.0.1:'+port);
    if(url.pathname.startsWith('/file/')){if(url.pathname.startsWith('/file/r2-')){const item=await runtime.bucket.get(decodeURIComponent(url.pathname.slice(6)));if(!item){res.writeHead(404);res.end();return;}res.writeHead(200,{'Content-Type':item.httpMetadata?.contentType||'application/octet-stream'});res.end(Buffer.from(await item.arrayBuffer()));return;}res.writeHead(200,{'Content-Type':'image/png'});res.end(Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jhT8AAAAASUVORK5CYII=','base64'));return;}
-   if(url.pathname==='/studio/export-utils.js'){res.writeHead(200,{'Content-Type':'application/javascript'});res.end(fs.readFileSync(path.join(__dirname,'../../studio/export-utils.js')));return;}
+   if(['/studio/export-utils.js','/studio/grid-window.js'].includes(url.pathname)){res.writeHead(200,{'Content-Type':'application/javascript'});res.end(fs.readFileSync(path.join(__dirname,'../..'+url.pathname)));return;}
    if(!url.pathname.startsWith('/api/')){res.writeHead(200,{'Content-Type':'text/html; charset=utf-8'});res.end(fs.readFileSync(path.join(__dirname,'../../studio/index.html')));return;}
    const chunks=[];for await(const chunk of req)chunks.push(chunk);
    const request=new Request(url,{method:req.method,headers:req.headers,...(!['GET','HEAD'].includes(req.method)?{body:Buffer.concat(chunks)}:{})});

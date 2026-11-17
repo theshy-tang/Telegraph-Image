@@ -292,3 +292,14 @@ Codex 能回答以下问题才算完成接手：它知道当前分支/PR 与 Pro
 - Final review also synchronized toolbar results with the returned display name and private fields before accepting a newer metadata version. Regression prevents a subsequent inspector save from using old prompt text with a fresh version.
 
 - Compatibility boundary: old commit-specific deployments still run older editableMetadata whitelists and can drop these keys when writing. Use the newest Preview; old client payloads against the NEW endpoint are covered and preserve absent fields. No old deployments were disabled in this batch.
+
+
+## 2026-11-17 large-library rendering
+
+- Owner explicitly prioritized large-library performance and deferred other feature goals. Do not restart drag/drop, recycle bin or production rollout as the next default task.
+- Found the main bottleneck: render attached every matched card and rebuilt the full grid. The old 320-node cache could not evict them because all matched IDs were marked visible.
+- Added studio/grid-window.js row geometry/navigation helper and main-grid viewport rendering above 200 matched items. Fixed card heights (260/220), two overscan rows, exact spacer geometry, frame-coalesced passive scroll and resize observation. Window scroll does not recalculate tags/filter/sort/statistics.
+- Virtual cache bounded by max(96, mounted/focus-retained cards). Selection is still an ID set across the complete loaded result; checkbox updates use the cached filtered list. Focus can stay on one offscreen card; arrow/Home/End navigation reaches all items. Nonvirtual small grids and C hybrid folder filtering remain intact. Search dialog receives content-visibility only, not full DOM virtualization.
+- 244 tests passing, including 5 new geometry/navigation cases. Local real browser: same 1504 loaded items, baseline 1504 card nodes vs 16 at measured desktop location; 17 at end including focus retention; narrow layout 11. Exact row heights, full-set selection (1504), independent first/last selection plus successful 2-item favorite, filter clear/restore and native scroll were checked. Temporary viewport restored. See docs/STUDIO_PERFORMANCE.md for evidence and limits.
+- Fixture server can seed large sets with STUDIO_FIXTURE_MEDIA_COUNT, now indexes every source page in D1 batches. No auth credentials or schema/config changed in remote environments.
+- No server-generated thumbnails/video posters, bandwidth/FPS/heap improvement claim, paid image feature or external image service. Original media paths are preserved. Only local fixture metadata was changed for acceptance; Production/real Preview media and Draft PR merge remain untouched.

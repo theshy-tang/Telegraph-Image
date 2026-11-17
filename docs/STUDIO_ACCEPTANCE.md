@@ -80,3 +80,12 @@ The local fixture server now also uses ephemeral Miniflare R2. Logged in with it
 - Public catalog regression publishes a fixture and checks none of these fields or sentinel contents appear. No new AI calls/services. Local acceptance does not imply editing any real Preview/Production record.
 
 - Final review also synchronized toolbar results with the returned display name and private fields before accepting a newer metadata version. Regression prevents a subsequent inspector save from using old prompt text with a fresh version.
+
+
+## Large-library viewport rendering — 2026-11-17
+
+- Suite: 244 passing. Five added tests validate 100000-item window calculations (not an actual 100000-item browser load), exact spacer totals including partial rows, mobile heights, bounds and keyboard targets.
+- Real local browser baseline: 1504 media loaded, 1504 .tile nodes. Optimized same dataset/location: 16 .tile nodes; all 1504 still matched. Four-column total height 104885px, card height 260px. End navigation focused aria position 1504 and kept 17 cards including prior focus.
+- Selected first and last items across window changes, bulk favorited both successfully. Full result selection counted 1504. Exact local search returned one card; clearing recovered the full dataset. Actual scroll repainted the final row window and retained focus.
+- Narrow viewport: 2 columns, 220px cards, total height 173701px, 11 cards including retained focus, final item reachable, no horizontal document overflow. Viewport reset afterward.
+- This is DOM/layout validation with tiny image fixtures, not proof of real-image bandwidth, frame rate or heap usage. Remote Preview has too few records to exercise the threshold. No real data mutations or image transformations. See docs/STUDIO_PERFORMANCE.md.

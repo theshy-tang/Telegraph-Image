@@ -193,8 +193,9 @@ body.working button[data-action]{opacity:.6}
 .folderbar .ghost.deleting:disabled{opacity:1}
 .tag-choices{display:flex;flex-wrap:wrap;gap:8px;max-height:240px;overflow:auto;padding:4px}.tag-choice{display:flex;align-items:center;gap:6px;border:1px solid #dfe5f1;border-radius:12px;padding:8px 10px;cursor:pointer}.tag-choice input{width:auto;margin:0}.tag-choice:has(input:checked){background:#edf2ff;border-color:#7899ea}
 #preview{width:95vw;max-width:min(1120px,95vw);max-height:92vh;overflow:auto}#preview .modalbody{grid-template-columns:minmax(0,1.4fr) minmax(300px,1fr);align-items:start}#preview .modalbody img,#preview .modalbody video{max-height:76vh}.detail-fields textarea{width:100%;box-sizing:border-box;resize:vertical;min-height:90px;border:1px solid #dce5f4;border-radius:10px;padding:10px;font:inherit;color:inherit;background:#fff}.detail-fields{border:0;margin:0;padding:0;min-width:0;display:flex;flex-direction:column;gap:12px}.detail-fields hr{border:0;border-top:1px solid #e8edf5;width:100%;margin:5px 0}.detail-meta{color:#8996ab;font-size:12px}.detail-label{display:flex;flex-direction:column;gap:5px;font-weight:600}.detail-label input,.detail-label select,.detail-add input{width:100%;box-sizing:border-box;min-width:0}.detail-section-title{font-weight:700;margin-top:8px}.detail-tags{display:flex;flex-wrap:wrap;gap:8px}.detail-tag{display:inline-flex;align-items:center;border:1px solid #dce5f4;background:#edf2fb;border-radius:9px;max-width:100%}.detail-tag button{border:0;background:transparent;padding:5px 7px;box-shadow:none;border-radius:7px;color:#425e8d;overflow-wrap:anywhere}.detail-tag input{width:145px;max-width:100%}.detail-add{display:flex;gap:8px}.detail-add button{white-space:nowrap}.detail-actions{display:flex;gap:8px;flex-wrap:wrap}@media(max-width:760px){#preview .modalbody{grid-template-columns:1fr}#preview .modalbody img,#preview .modalbody video{max-height:45vh}}
-.catalog-dialog{width:95vw;max-width:min(1050px,95vw);max-height:90vh;overflow:auto}.catalog-form{padding:10px 24px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.catalog-form label{display:flex;flex-direction:column;gap:5px;font-size:13px;font-weight:600}.catalog-form input,.catalog-form select{min-width:0;width:100%;box-sizing:border-box}.catalog-form .catalog-descendants{flex-direction:row;align-items:center}.catalog-descendants input{width:auto}.catalog-summary{padding:15px 24px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;color:#63748f;font-size:13px}.catalog-summary span{flex:1}.catalog-results{padding:0 24px 22px;display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:14px}.catalog-result{position:relative;border:1px solid #e3e9f3;border-radius:16px;overflow:hidden}.catalog-result>input{position:absolute;left:10px;top:10px;z-index:1;width:18px;height:18px;cursor:pointer}.catalog-preview{width:100%;height:100%;border:0;box-shadow:none;background:white;text-align:left;display:flex;flex-direction:column;gap:7px;padding:12px}.catalog-preview img{width:100%;height:125px;object-fit:cover;border-radius:9px}.catalog-preview strong{overflow-wrap:anywhere}.catalog-preview .muted{font-size:12px}@media(max-width:700px){.catalog-form{grid-template-columns:1fr 1fr}.catalog-results{grid-template-columns:1fr 1fr}}
+.catalog-dialog{width:95vw;max-width:min(1050px,95vw);max-height:90vh;overflow:auto}.catalog-form{padding:10px 24px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.catalog-form label{display:flex;flex-direction:column;gap:5px;font-size:13px;font-weight:600}.catalog-form input,.catalog-form select{min-width:0;width:100%;box-sizing:border-box}.catalog-form .catalog-descendants{flex-direction:row;align-items:center}.catalog-descendants input{width:auto}.catalog-summary{padding:15px 24px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;color:#63748f;font-size:13px}.catalog-summary span{flex:1}.catalog-results{padding:0 24px 22px;display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:14px}.catalog-result{content-visibility:auto;contain-intrinsic-size:auto 240px;position:relative;border:1px solid #e3e9f3;border-radius:16px;overflow:hidden}.catalog-result>input{position:absolute;left:10px;top:10px;z-index:1;width:18px;height:18px;cursor:pointer}.catalog-preview{width:100%;height:100%;border:0;box-shadow:none;background:white;text-align:left;display:flex;flex-direction:column;gap:7px;padding:12px}.catalog-preview img{width:100%;height:125px;object-fit:cover;border-radius:9px}.catalog-preview strong{overflow-wrap:anywhere}.catalog-preview .muted{font-size:12px}@media(max-width:700px){.catalog-form{grid-template-columns:1fr 1fr}.catalog-results{grid-template-columns:1fr 1fr}}
 .global-tag-confirm{display:flex;gap:8px;align-items:flex-start;font-size:13px}.global-tag-confirm input{width:auto!important;flex:none;margin-top:3px}.global-tag-rows{display:flex;flex-direction:column;gap:8px;max-height:35vh;overflow:auto}.global-tag-row{display:flex;gap:8px;align-items:center;border:1px solid #e3e9f3;border-radius:12px;padding:10px}.global-tag-row strong{flex:1;overflow-wrap:anywhere}.global-tag-row span{white-space:nowrap;color:#76859c;font-size:13px}.global-tag-row button{padding:7px 10px}.global-tag-rows+button{margin-top:10px}#tagManagerEdit{margin-top:14px}#tagManagerEdit input,#tagManagerEdit select{width:100%;box-sizing:border-box}@media(max-width:600px){.global-tag-row{flex-wrap:wrap}.global-tag-row strong{flex-basis:55%}}
+.grid{--virtual-card-height:260px;overflow-anchor:none}.grid.virtualized .tile{height:var(--virtual-card-height)}.grid.virtualized .details{height:73px;min-height:0}.grid-spacer{grid-column:1/-1;pointer-events:none}.grid .offscreen-focus{position:absolute!important;left:-10000px;top:0;width:1px!important;height:1px!important;overflow:hidden}@media(max-width:540px){.grid{--virtual-card-height:220px}.grid.virtualized .details{height:74px}}
 </style>
 </head>
 <body>
@@ -246,7 +247,7 @@ body.working button[data-action]{opacity:.6}
 </div>
 <section class="panel">
 <div id="childFolders" class="child-folder-region hidden" aria-label="当前相册的子文件夹"></div>
-<div class="heading"><div><h2>素材资源管理</h2><div class="muted" id="resultCount" style="margin-top:5px">加载中...</div></div><div class="toolbar"><button id="indexMaintenanceOpen" type="button" class="ghost" disabled>索引维护</button><button id="tagManagerOpen" type="button" class="ghost" disabled>标签管理</button><button id="globalSearchOpen" type="button" class="ghost" disabled title="全库索引准备好后可用">⌕ 全库检索</button><button id="selectPage" class="ghost">✓ 全选当前结果</button></div></div>
+<div class="heading"><div><h2>素材资源管理</h2><div class="muted" id="resultCount" role="status" style="margin-top:5px">加载中...</div></div><div class="toolbar"><button id="indexMaintenanceOpen" type="button" class="ghost" disabled>索引维护</button><button id="tagManagerOpen" type="button" class="ghost" disabled>标签管理</button><button id="globalSearchOpen" type="button" class="ghost" disabled title="全库索引准备好后可用">⌕ 全库检索</button><button id="selectPage" class="ghost">✓ 全选当前结果</button></div></div>
 <div class="toolbar"><input id="search" class="search" placeholder="⌕ 搜索文件名、标签、相册..." aria-label="搜索素材"><select id="tagFilter" aria-label="按标签筛选"><option value="">全部标签</option></select><select id="albumFilter" title="旧版标签式相册（兼容旧数据）"><option value="">旧版相册标签</option></select><select id="order"><option value="new">最新上传</option><option value="old">最早上传</option><option value="name">名称排序</option></select></div>
 <div class="filterbar"><div class="toolbar" id="chips"><button data-chip="all" class="chip on">全部</button><button data-chip="image" class="chip">图片</button><button data-chip="video" class="chip">视频</button><button data-chip="favorites" class="chip">收藏</button><button data-chip="published" class="chip">AI 已发布</button></div><span class="muted" id="selectedInfo">未选择</span></div>
 <div id="bulkbar" class="bulkbar hidden"><span class="count" id="selectedCount">已选择 0 项</span><button data-action="favorite">♡ 收藏</button><button data-action="unfavorite">取消收藏</button><button data-action="add_tags">＋ 标签</button><button data-action="remove_tags">－ 标签</button><button data-action="move_folder">▤ 移入相册</button><button data-action="clear_folder">移出相册</button><button data-action="set_category">分类</button><button data-action="publish">✧ 发布 AI</button><button data-action="unpublish">撤销 AI 发布</button><button id="exportSelected" type="button">下载 / 导出</button><button id="clearSelection">清除选择</button></div>
@@ -333,6 +334,7 @@ body.working button[data-action]{opacity:.6}
 </form></dialog>
 <dialog id="preview"><div class="modalhead"><strong>素材详情</strong><button class="close" id="closePreview">✕</button></div><div class="modalbody"><div id="previewMedia"></div><div class="modalinfo" id="previewInfo"></div></div></dialog>
 <div id="toast" class="toast" role="status"></div>
+<script src="/studio/grid-window.js"></script>
 <script src="/studio/export-utils.js"></script>
 <script>
 (() => {
@@ -694,12 +696,12 @@ function filterItems(){
   return result;
 }
 function elt(tag,cls,text){const e=document.createElement(tag);if(cls)e.className=cls;if(text!==undefined)e.textContent=text;return e;}
-function updateSelectionUI(){
+function updateSelectionUI(matches){
   const count=state.selected.size;
   $('selectedInfo').textContent=count?'● 已选中 '+count+' 项':'点击卡片查看大图 · 勾选后可批量操作';
   $('selectedCount').textContent='已选 '+count+' 项';
   $('bulkbar').classList.toggle('hidden',count===0);
-  const matches=filterItems();
+  matches=matches||filterItems();
   $('selectPage').textContent=matches.length&&matches.every(x=>state.selected.has(x.id))?'取消全选当前结果':'✓ 全选当前结果';
   for(const [id,tile] of state.tiles){
     const checked=state.selected.has(id);
@@ -707,8 +709,45 @@ function updateSelectionUI(){
     tile.classList.toggle('picked',checked);
   }
 }
+const mediaViewport={items:[],key:null,frame:null,metrics:null,width:0};
+function gridMetrics(){
+  const grid=$('grid');if(!mediaViewport.metrics||mediaViewport.width!==grid.clientWidth){
+    const style=getComputedStyle(grid);mediaViewport.width=grid.clientWidth;
+    mediaViewport.metrics={columns:Math.max(1,style.gridTemplateColumns.split(' ').filter(Boolean).length),height:parseFloat(style.getPropertyValue('--virtual-card-height'))||260,gap:parseFloat(style.rowGap)||0};
+  }return mediaViewport.metrics;
+}
+function paintMediaWindow(force=false){
+  const grid=$('grid'),list=mediaViewport.items;if(!list.length)return;
+  const virtual=list.length>200,metrics=gridMetrics(),rect=grid.getBoundingClientRect();
+  const range=virtual?StudioGrid.range({count:list.length,...metrics,top:rect.top,viewport:window.innerHeight}):{start:0,end:list.length,before:0,after:0};
+  const key=[virtual,range.start,range.end,metrics.columns].join(':');if(!force&&key===mediaViewport.key)return;mediaViewport.key=key;
+  const active=document.activeElement,focused=grid.contains(active)?active.closest('.tile'):null;
+  const frag=document.createDocumentFragment(),visible=new Set();
+  const spacer=height=>{const div=elt('div','grid-spacer');div.style.height=height+'px';div.setAttribute('aria-hidden','true');return div;};
+  if(range.before)frag.append(spacer(range.before));
+  for(let i=range.start;i<range.end;i++){
+    const x=list[i];visible.add(x.id);let tile=state.tiles.get(x.id);
+    if(!tile)tile=createTile(x);else state.tiles.delete(x.id);state.tiles.set(x.id,tile);
+    tile.classList.remove('offscreen-focus');tile.tabIndex=0;tile._check.tabIndex=0;for(const button of tile.querySelectorAll('button'))button.tabIndex=0;refreshTile(tile,x);tile._check.checked=state.selected.has(x.id);tile.classList.toggle('picked',tile._check.checked);tile.setAttribute('aria-posinset',String(i+1));tile.setAttribute('aria-setsize',String(list.length));frag.append(tile);
+  }
+  if(range.after)frag.append(spacer(range.after));
+  if(focused&&!visible.has(focused.dataset.mediaId)&&list.some(x=>x.id===focused.dataset.mediaId)){focused.classList.add('offscreen-focus');focused.tabIndex=-1;for(const child of focused.querySelectorAll('input,button'))child.tabIndex=-1;visible.add(focused.dataset.mediaId);frag.append(focused);}
+  grid.classList.toggle('virtualized',virtual);grid.setAttribute('aria-live',virtual?'off':'polite');grid.replaceChildren(frag);
+  if(active&&grid.contains(active))active.focus({preventScroll:true});
+  const limit=Math.max(96,visible.size);for(const id of state.tiles.keys()){if(state.tiles.size<=limit)break;if(!visible.has(id))state.tiles.delete(id);}
+}
+function scheduleMediaWindow(){
+  if(mediaViewport.frame!==null)return;mediaViewport.frame=requestAnimationFrame(()=>{mediaViewport.frame=null;paintMediaWindow();});
+}
+function navigateMedia(id,key){
+  const list=mediaViewport.items,index=list.findIndex(x=>x.id===id);if(index<0)return false;
+  const metrics=gridMetrics(),next=StudioGrid.target(index,key,metrics.columns,list.length);if(next===null)return false;
+  const item=list[next],grid=$('grid');
+  if(list.length>200){const y=grid.getBoundingClientRect().top+window.scrollY+Math.floor(next/metrics.columns)*(metrics.height+metrics.gap);window.scrollTo({top:Math.max(0,y-window.innerHeight/4),behavior:'instant'});paintMediaWindow(true);}
+  state.tiles.get(item.id)?.focus({preventScroll:list.length>200});return true;
+}
 function createTile(x){
-  const tile=elt('article','tile');tile.tabIndex=0;tile.setAttribute('aria-label','查看 '+x.name);
+  const tile=elt('article','tile');tile.tabIndex=0;tile.dataset.mediaId=x.id;tile.setAttribute('aria-label','查看 '+x.name);
   const media=elt('div','media');
   if(x.type==='image'){
     const img=elt('img');img.alt='';img.loading='lazy';img.decoding='async';img.fetchPriority='low';
@@ -735,7 +774,7 @@ function createTile(x){
   details.append(filename,sub);tile.append(details);
   tile._check=check;tile._tags=tags;tile._filename=filename;tile._sub=sub;
   tile.addEventListener('click',()=>{const latest=state.items.find(v=>v.id===x.id);if(latest)preview(latest);});
-  tile.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target===tile){const latest=state.items.find(v=>v.id===x.id);if(latest)preview(latest);}});
+  tile.addEventListener('keydown',e=>{if(e.target===tile&&navigateMedia(x.id,e.key)){e.preventDefault();return;}if(e.key==='Enter'&&e.target===tile){const latest=state.items.find(v=>v.id===x.id);if(latest)preview(latest);}});
   return tile;
 }
 function refreshTile(tile,x){
@@ -768,29 +807,15 @@ function render(){
   $('loadMore').classList.toggle('hidden',state.complete);
   $('selectAllMatched').classList.toggle('hidden',state.complete);
   if(!list.length){
+    mediaViewport.items=[];mediaViewport.key=null;state.tiles.clear();grid.classList.remove('virtualized');grid.setAttribute('aria-live','polite');
     grid.replaceChildren(elt('div','empty',folderById(state.folderSelection)&&folderChildren(state.folderSelection).length&&!state.includeDescendants?'当前相册没有直接存放的素材。可以打开上面的子文件夹，或者开启「包含子文件夹素材」。':'没有匹配的素材。请调整搜索或筛选条件。'));
-    updateSelectionUI();return;
+    updateSelectionUI(list);return;
   }
-  const frag=document.createDocumentFragment();
-  for(const x of list){
-    let tile=state.tiles.get(x.id);
-    if(!tile){tile=createTile(x);state.tiles.set(x.id,tile);}
-    refreshTile(tile,x);
-    frag.append(tile);
-  }
-  grid.replaceChildren(frag);
-  // Reuse recent card nodes while keeping memory bounded for larger libraries.
-  if(state.tiles.size>320){
-    const visible=new Set(list.map(x=>x.id));
-    for(const id of state.tiles.keys()){
-      if(state.tiles.size<=320)break;
-      if(!visible.has(id))state.tiles.delete(id);
-    }
-  }
-  updateSelectionUI();
+  mediaViewport.items=list;mediaViewport.key=null;paintMediaWindow(true);
+  updateSelectionUI(list);
 }
 function formatBytes(n){return n>=1048576?(n/1048576).toFixed(1)+' MB':n>=1024?(n/1024).toFixed(1)+' KB':n+' B';}
-function select(id,checked){checked?state.selected.add(id):state.selected.delete(id);updateSelectionUI();}
+function select(id,checked){checked?state.selected.add(id):state.selected.delete(id);updateSelectionUI(mediaViewport.items);}
 function setChip(chip){
   state.chip=chip;document.querySelectorAll('.chip').forEach(el=>el.classList.toggle('on',el.dataset.chip===chip));
   document.querySelectorAll('.nav').forEach(el=>el.classList.toggle('active',el.dataset.view===chip));
@@ -1300,6 +1325,9 @@ $('folderMoveSave').addEventListener('click',async()=>{
   await runAction('move_folder',{folderId});
 });
 $('reload').addEventListener('click',()=>loadPage(true));
+window.addEventListener('scroll',scheduleMediaWindow,{passive:true});
+window.addEventListener('resize',()=>{mediaViewport.metrics=null;scheduleMediaWindow();});
+if(typeof ResizeObserver!=='undefined')new ResizeObserver(()=>{mediaViewport.metrics=null;scheduleMediaWindow();}).observe($('grid'));
 let searchTimer; $('search').addEventListener('input',()=>{clearTimeout(searchTimer);searchTimer=setTimeout(render,110);});
 $('tagFilter').addEventListener('change',render);
 $('tagSearch').addEventListener('input',renderTagChoices);
