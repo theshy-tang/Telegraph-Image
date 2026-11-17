@@ -1,3 +1,4 @@
+import {hasStudioD1,getStudioMediaFolders} from '../../utils/studio-d1.js';
 import { jsonResponse } from "../../utils/http.js";
 import { isInternalKey } from "../../utils/kv-keys.js";
 
@@ -14,9 +15,14 @@ export async function onRequest(context) {
   const prefix = url.searchParams.get("prefix") || undefined;
   const value = await env.img_url.list({ limit, cursor, prefix });
 
-  return jsonResponse({
-    ...value,
-    // Hide internal bookkeeping keys (short links, caches) from the file list
-    keys: value.keys.filter(key => !isInternalKey(key.name)),
-  });
+  const keys=value.keys.filter(key => !isInternalKey(key.name));
+  if(hasStudioD1(env)){
+    const memberships=await getStudioMediaFolders(env.MEDIA_STUDIO_DB,keys.map(k=>k.name));
+    // D1 is authoritative: missing mapping means unfiled, even if KV has an
+    // older folderId from before the migration.
+    for(const key of keys){
+      key.metadata={...(key.metadata||{}),folderId:memberships.get(key.name)||null};
+    }
+  }
+  return jsonResponse({...value,keys});
 }
