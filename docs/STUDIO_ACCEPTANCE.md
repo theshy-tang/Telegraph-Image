@@ -52,3 +52,12 @@ The local fixture server now also uses ephemeral Miniflare R2. Logged in with it
 - Browser saw global counts of 106 Fixture media plus 1 Global-only across 107 disposable samples. An old native confirm blocked browser automation; confirmation is now an in-page checkbox. Browser write-to-refresh acceptance of the revised control is still outstanding.
 - Separate HTTP acceptance through real local management middleware/handlers: renamed Fixture on 106 records, merged Global-only into Organized on 1, final usage count 107, immediate exact-tag search 107 and old-tag search 0. Local fixture credentials/storage only. No real Preview or Production tags changed.
 - Preview deployment and unauthenticated HTTP checks are reported separately; successful build does not replace authenticated global tag browser acceptance.
+
+
+## Download and export — 2026-11-17
+
+- Complete suite: 214 passing. New checks cover authoritative whitelisted export fields/folder paths, no raw/provider data, tombstones, original byte attachments, filename/header safety, block/whitelist behavior, fixed Preview upstream/credential stripping, sanitized failures, request limits and inherited management auth.
+- Format tests independently unpack ZIP bytes with Python zipfile and verify CRC, Unicode names and ordinal collision prevention. CSV tests cover quotes/newlines/array boundaries and formula-prefix mitigation. Streaming/job tests cover undeclared overflow, cancellation, empty/error responses, no partial ZIP, preserved selection and request batching.
+- Actual local browser acceptance on isolated R2 fixtures: detail action opens single-file mode; original PNG saved; ZIP saved; JSON and CSV saved. Then selected two full-library results and downloaded through the bulk toolbar as one ZIP.
+- Disk readback: original 68 bytes; two ZIP entries both byte-identical to the original and CRC valid; exported JSON current tag Download; CSV parsed as header plus one record, each 14 columns. No real Telegram credentials or media were used.
+- Limits are explicit product policy, not provider limits: 100 files and 100 MiB total per ZIP; 50 MiB per file (also single-file mode); metadata at most 1000 items, fetched in batches of 50. Remote authenticated real-media download still needs user acceptance; build/unauthenticated runtime checks are separate.

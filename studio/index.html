@@ -249,7 +249,7 @@ body.working button[data-action]{opacity:.6}
 <div class="heading"><div><h2>素材资源管理</h2><div class="muted" id="resultCount" style="margin-top:5px">加载中...</div></div><div class="toolbar"><button id="tagManagerOpen" type="button" class="ghost" disabled>标签管理</button><button id="globalSearchOpen" type="button" class="ghost" disabled title="全库索引准备好后可用">⌕ 全库检索</button><button id="selectPage" class="ghost">✓ 全选当前结果</button></div></div>
 <div class="toolbar"><input id="search" class="search" placeholder="⌕ 搜索文件名、标签、相册..." aria-label="搜索素材"><select id="tagFilter" aria-label="按标签筛选"><option value="">全部标签</option></select><select id="albumFilter" title="旧版标签式相册（兼容旧数据）"><option value="">旧版相册标签</option></select><select id="order"><option value="new">最新上传</option><option value="old">最早上传</option><option value="name">名称排序</option></select></div>
 <div class="filterbar"><div class="toolbar" id="chips"><button data-chip="all" class="chip on">全部</button><button data-chip="image" class="chip">图片</button><button data-chip="video" class="chip">视频</button><button data-chip="favorites" class="chip">收藏</button><button data-chip="published" class="chip">AI 已发布</button></div><span class="muted" id="selectedInfo">未选择</span></div>
-<div id="bulkbar" class="bulkbar hidden"><span class="count" id="selectedCount">已选择 0 项</span><button data-action="favorite">♡ 收藏</button><button data-action="unfavorite">取消收藏</button><button data-action="add_tags">＋ 标签</button><button data-action="remove_tags">－ 标签</button><button data-action="move_folder">▤ 移入相册</button><button data-action="clear_folder">移出相册</button><button data-action="set_category">分类</button><button data-action="publish">✧ 发布 AI</button><button data-action="unpublish">撤销 AI 发布</button><button id="clearSelection">清除选择</button></div>
+<div id="bulkbar" class="bulkbar hidden"><span class="count" id="selectedCount">已选择 0 项</span><button data-action="favorite">♡ 收藏</button><button data-action="unfavorite">取消收藏</button><button data-action="add_tags">＋ 标签</button><button data-action="remove_tags">－ 标签</button><button data-action="move_folder">▤ 移入相册</button><button data-action="clear_folder">移出相册</button><button data-action="set_category">分类</button><button data-action="publish">✧ 发布 AI</button><button data-action="unpublish">撤销 AI 发布</button><button id="exportSelected" type="button">下载 / 导出</button><button id="clearSelection">清除选择</button></div>
 <div id="grid" class="grid" aria-live="polite"></div>
 <div class="bottom-actions">
 <button id="loadMore" class="ghost">加载更多素材</button>
@@ -260,6 +260,11 @@ body.working button[data-action]{opacity:.6}
 </section>
 </main>
 </div>
+<dialog id="exportDialog" class="folder-dialog" aria-labelledby="exportTitle">
+<div class="modalhead"><strong id="exportTitle">下载与导出</strong><button id="exportClose" type="button" class="close" aria-label="关闭下载与导出">×</button></div>
+<form id="exportForm"><div class="folder-fields"><p id="exportSummary"></p><fieldset id="exportFields" class="detail-fields"><label class="detail-label">导出格式<select id="exportFormat"><option value="file">单个原文件</option><option value="zip">原文件 ZIP 打包</option><option value="json">素材资料 JSON</option><option value="csv">素材资料 CSV</option></select></label>
+<p class="muted">ZIP 最多 100 个文件、单文件 50 MiB、合计 100 MiB；资料导出最多 1000 项。任一文件失败时不生成不完整压缩包。资料包含原始公开链接，请自行保管。</p><button type="submit" class="primary" id="exportStart">开始生成</button></fieldset><p id="exportStatus" class="notice" role="status"></p></div></form>
+<div class="folder-dialog-actions"><button type="button" id="exportCancel" class="ghost">关闭</button></div></dialog>
 <dialog id="tagManager" class="catalog-dialog" aria-labelledby="tagManagerTitle">
 <div class="modalhead"><strong id="tagManagerTitle">全局标签管理</strong><button type="button" class="close" id="tagManagerClose" aria-label="关闭标签管理">×</button></div>
 <div class="folder-fields"><p class="muted">统计整个素材库。重命名与合并会影响所有使用该标签的素材，操作后刷新素材列表并清空当前选择。</p>
@@ -322,6 +327,7 @@ body.working button[data-action]{opacity:.6}
 </form></dialog>
 <dialog id="preview"><div class="modalhead"><strong>素材详情</strong><button class="close" id="closePreview">✕</button></div><div class="modalbody"><div id="previewMedia"></div><div class="modalinfo" id="previewInfo"></div></div></dialog>
 <div id="toast" class="toast" role="status"></div>
+<script src="/studio/export-utils.js"></script>
 <script>
 (() => {
 'use strict';
@@ -785,6 +791,54 @@ function setChip(chip){
   if(state.folderSelection==='all')$('pageTitle').textContent=({all:'全部素材',image:'图片',video:'视频',favorites:'我的收藏',published:'AI 已发布'})[chip]||'全部素材';
   render();
 }
+const exportJob={ids:[],busy:false,controller:null};
+function saveExportBlob(blob,name){
+  const url=URL.createObjectURL(blob),link=elt('a');link.href=url;link.download=name;document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);
+}
+function openExport(ids,format='zip'){
+  if(state.busy||!ids.length)return;
+  exportJob.ids=[...new Set(ids)];$('exportFormat').options[0].disabled=exportJob.ids.length!==1;$('exportFormat').value=format;$('exportSummary').textContent='本次处理 '+exportJob.ids.length+' 项素材，使用打开面板时的选择。';$('exportStatus').textContent='';$('exportDialog').showModal();
+}
+function closeExport(){
+  if(exportJob.busy){exportJob.controller.abort();$('exportStatus').textContent='正在取消…';return;}$('exportDialog').close();
+}
+async function collectExportRecords(ids,signal){
+  const records=[];
+  for(let i=0;i<ids.length;i+=50){
+    if(signal.aborted)throw new DOMException('已取消','AbortError');
+    const r=await api('/api/manage/export',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ids:ids.slice(i,i+50)}),signal});
+    if(r.missing?.length)throw Error('有 '+r.missing.length+' 项素材已不存在，请刷新列表后重试');records.push(...r.records);
+    $('exportStatus').textContent='已读取资料 '+records.length+' / '+ids.length;
+  }
+  if(records.length!==ids.length)throw Error('返回资料不完整，未生成导出文件');return records;
+}
+async function runExport(event){
+  event.preventDefault();if(exportJob.busy||state.busy)return false;
+  const format=$('exportFormat').value,ids=[...exportJob.ids],limit=['zip','file'].includes(format)?StudioExport.MAX_FILES:1000;
+  if(!ids.length||ids.length>limit||(format==='file'&&ids.length!==1)){$('exportStatus').textContent='当前格式最多处理 '+limit+' 项；单个原文件仅支持 1 项，请减少选择或改用资料导出。';return false;}
+  if(!['zip','file','json','csv'].includes(format))return false;
+  const controller=new AbortController();exportJob.controller=controller;exportJob.busy=true;state.busy=true;setBusyUI(true);$('exportFields').disabled=true;$('exportCancel').textContent='取消任务';
+  try{
+    const records=await collectExportRecords(ids,controller.signal),stamp=new Date().toISOString().replace(/[:.]/g,'-');let blob,name;
+    if(format==='json'){blob=new Blob([JSON.stringify({exportedAt:new Date().toISOString(),records},null,2)],{type:'application/json;charset=utf-8'});name='media-studio-'+stamp+'.json';}
+    else if(format==='csv'){blob=new Blob([StudioExport.csv(records)],{type:'text/csv;charset=utf-8'});name='media-studio-'+stamp+'.csv';}
+    else{
+      let total=0;const entries=[];
+      for(const record of records){
+        if(controller.signal.aborted)throw new DOMException('已取消','AbortError');
+        const budget=Math.min(StudioExport.MAX_FILE_BYTES,StudioExport.MAX_BYTES-total);if(budget<=0)throw Error('本批文件超过 100 MiB，请减少选择');
+        $('exportStatus').textContent='下载 '+(entries.length+1)+' / '+records.length+'：'+record.fileName;
+        const response=await fetch('/api/manage/download/'+encodeURIComponent(record.id),{headers:authHeader(),cache:'no-store',signal:controller.signal});
+        const bytes=await StudioExport.readBytes(response,budget,controller.signal,n=>{$('exportStatus').textContent='下载 '+(entries.length+1)+' / '+records.length+'：'+record.fileName+' · '+formatBytes(n);});
+        total+=bytes.length;entries.push({id:record.id,name:record.fileName,bytes});
+      }
+      if(format==='file'){blob=new Blob([entries[0].bytes],{type:'application/octet-stream'});name=StudioExport.filename(entries[0].name,entries[0].id);}
+      else{blob=StudioExport.zip(entries);name='media-studio-'+stamp+'.zip';}
+    }
+    if(controller.signal.aborted)throw new DOMException('已取消','AbortError');saveExportBlob(blob,name);$('exportStatus').textContent='已生成 '+records.length+' 项，请在浏览器下载列表确认保存。';return true;
+  }catch(error){$('exportStatus').textContent=error.name==='AbortError'?'已取消，未生成导出文件。':'生成失败：'+error.message+'。未生成导出文件，可重试；当前选择已保留。';return false;}
+  finally{exportJob.busy=false;state.busy=false;setBusyUI(false);$('exportFields').disabled=false;$('exportCancel').textContent='关闭';}
+}
 const tagManagerState={items:[],after:null,query:'',loading:false,writing:false,generation:0,controller:null};
 function closeTagManager(){
   if(tagManagerState.writing)return;
@@ -973,7 +1027,8 @@ function preview(x){
   const publish=elt('button','ghost',x.published?'撤销 AI 发布':'发布给 AI');publish.type='button';publish.addEventListener('click',async()=>{if(!d.x.published&&!confirm('确认将此图片发布到无需登录的公开 AI 素材目录？'))return;if(await detailWrite(d.x.published?'unpublish':'publish'))publish.textContent=d.x.published?'撤销 AI 发布':'发布给 AI';});
   const actions=elt('div','detail-actions');actions.append(favorite,publish);fields.append(actions,elt('hr'));
   const copy=elt('button','ghost','复制真实链接');copy.type='button';copy.addEventListener('click',async()=>{try{await navigator.clipboard.writeText(publicFileUrl(x.id));toast('已复制链接');}catch{message.textContent='复制失败，请检查浏览器权限';}});
-  fields.append(copy,elt('p','muted','仅修改素材资料，不更改原始文件和图片 URL。'));info.append(fields,message);$('preview').showModal();
+  const download=elt('button','ghost','下载 / 导出');download.type='button';download.addEventListener('click',()=>openExport([x.id],'file'));
+  fields.append(download,copy,elt('p','muted','仅修改素材资料，不更改原始文件和图片 URL。'));info.append(fields,message);$('preview').showModal();
 }
 const tagEditor={action:null,chosen:new Set()};
 function parseTagNames(raw){
@@ -1144,6 +1199,11 @@ $('loginForm').addEventListener('submit',async e=>{
 });
 $('globalSearchOpen').addEventListener('click',openCatalog);
 $('tagManagerOpen').addEventListener('click',openTagManager);
+$('exportSelected').addEventListener('click',()=>openExport([...state.selected]));
+$('exportClose').addEventListener('click',closeExport);
+$('exportCancel').addEventListener('click',closeExport);
+$('exportDialog').addEventListener('cancel',event=>{if(exportJob.busy){event.preventDefault();closeExport();}});
+$('exportForm').addEventListener('submit',runExport);
 $('tagManagerClose').addEventListener('click',closeTagManager);
 $('tagManager').addEventListener('cancel',event=>{if(tagManagerState.writing){event.preventDefault();return;}tagManagerState.controller?.abort();tagManagerState.generation++;});
 $('tagManagerSearch').addEventListener('submit',event=>{event.preventDefault();loadGlobalTags(true);});
