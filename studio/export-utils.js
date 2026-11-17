@@ -28,7 +28,13 @@
   return new Blob([...locals,...central,end.bytes],{type:'application/zip'});
  }
  async function readBytes(response,budget,signal,onBytes=()=>{}){
-  if(!response.ok)throw Error('下载接口返回 '+response.status);
+  if(!response.ok){
+   // Display only known codes, never upstream bodies/URLs/provider exception text.
+   let info={};try{const data=await response.json();if(data&&typeof data==='object')info=data;}catch{}
+   const messages={INVALID_MEDIA_ID:'素材标识无效',MEDIA_NOT_FOUND:'素材记录已不存在，请刷新列表',MEDIA_RESTRICTED:'素材受黑名单或白名单规则限制',SOURCE_FETCH_FAILED:'原文件请求失败，请稍后重试',SOURCE_REDIRECT:'原文件返回了重定向，下载已停止，请检查原链接',SOURCE_HTTP_ERROR:'原文件服务器未能返回文件',SOURCE_NOT_MEDIA:'原链接返回了网页或错误数据，未下载',DOWNLOAD_UNAVAILABLE:'下载服务暂时不可用'};
+   const known=typeof info.code==='string'&&Object.hasOwn(messages,info.code);
+   throw Error((known?messages[info.code]:'下载接口返回 '+response.status)+(info.code?' ['+(known?info.code:'UNKNOWN')+']':''));
+  }
   const length=Number(response.headers.get('Content-Length'));if(length>budget){await response.body?.cancel();throw Error('文件超出剩余下载容量');}
   const reader=response.body?.getReader();if(!reader)throw Error('下载内容为空');const chunks=[];let size=0;
   try{while(true){if(signal?.aborted)throw new DOMException('已取消','AbortError');const {done,value}=await reader.read();if(done)break;size+=value.byteLength;if(size>budget)throw Error('文件超出剩余下载容量');chunks.push(value);onBytes(size);}}

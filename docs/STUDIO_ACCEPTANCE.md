@@ -89,3 +89,11 @@ The local fixture server now also uses ephemeral Miniflare R2. Logged in with it
 - Selected first and last items across window changes, bulk favorited both successfully. Full result selection counted 1504. Exact local search returned one card; clearing recovered the full dataset. Actual scroll repainted the final row window and retained focus.
 - Narrow viewport: 2 columns, 220px cards, total height 173701px, 11 cards including retained focus, final item reachable, no horizontal document overflow. Viewport reset afterward.
 - This is DOM/layout validation with tiny image fixtures, not proof of real-image bandwidth, frame rate or heap usage. Remote Preview has too few records to exercise the threshold. No real data mutations or image transformations. See docs/STUDIO_PERFORMANCE.md.
+
+
+## Preview original-download HTTP 502 — 2026-11-17
+
+- Root reproduced in actual workerd: redirect:error throws TypeError before sending a request, while manual is accepted. Prior Node/R2 browser checks did not cover that platform-specific validation.
+- Fix uses manual plus explicit 3xx rejection. New actual-runtime tests execute the bundled handler with real isolated KV and outbound fixtures: successful original-byte attachment; redirected source rejected without fetching Location. Node tests additionally verify no Location disclosure. Client only renders allowlisted reason codes, including safe handling of unknown/null/prototype values.
+- Full suite: 248 passing. Two sampled public original URLs returned 200. Specific authenticated real Preview download remains user acceptance: current Chrome tab connection timed out, and no credentials were extracted to bypass the issue.
+- Production bindings/compatibility configuration and original media untouched. New deployment/runtime reachability checks are separate from this local runtime reproduction.
