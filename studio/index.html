@@ -491,10 +491,50 @@ function selectFolder(id){
     :id==='unfiled'?'未归类':folderById(id)?.name||'我的相册';
   renderFolders();render();
 }
+// KV is eventually consistent. Keep confirmed writes visible in this tab while
+// edge list caches converge; a successful API response is authoritative for UI.
+const FOLDER_WRITE_CACHE_KEY='media-studio-confirmed-folder-writes-v1';
+const FOLDER_WRITE_CACHE_MS=180000;
+function pendingFolderWrites(){
+  try {
+    const data=JSON.parse(sessionStorage.getItem(FOLDER_WRITE_CACHE_KEY)||'[]');
+    return Array.isArray(data)?data.filter(x=>x&&typeof x.id==='string'&&
+      Number.isFinite(x.at)&&Date.now()-x.at>=0&&Date.now()-x.at<FOLDER_WRITE_CACHE_MS).slice(-60):[];
+  }catch {return [];}
+}
+function storePendingFolderWrites(writes){
+  try{sessionStorage.setItem(FOLDER_WRITE_CACHE_KEY,JSON.stringify(writes.slice(-60)));}
+  catch{/* Storage may be disabled. Local in-memory state still works. */}
+}
+function recordConfirmedFolderWrite(type,folder){
+  if(!folder||typeof folder.id!=='string')return;
+  const writes=pendingFolderWrites().filter(x=>x.id!==folder.id);
+  writes.push({id:folder.id,type,folder:type==='delete'?null:folder,at:Date.now()});
+  storePendingFolderWrites(writes);
+}
+function applyConfirmedFolderWrites(serverFolders){
+  const folders=new Map(serverFolders.map(x=>[x.id,x]));
+  const waiting=[];
+  for(const write of pendingFolderWrites()){
+    if(write.type==='delete'){
+      if(folders.has(write.id)){
+        folders.delete(write.id);waiting.push(write);
+      }
+    }else if(write.folder){
+      const current=folders.get(write.id),desired=write.folder;
+      if(!current||current.name!==desired.name||current.parentId!==desired.parentId){
+        folders.set(write.id,desired);waiting.push(write);
+      }
+    }
+  }
+  storePendingFolderWrites(waiting);
+  return [...folders.values()];
+}
+
 async function loadFolders(){
   try{
     const r=await api('/api/manage/folders');
-    state.folders=Array.isArray(r.folders)?r.folders:[];
+    state.folders=applyConfirmedFolderWrites(Array.isArray(r.folders)?r.folders:[]);
     if(!['all','unfiled'].includes(state.folderSelection)&&!folderById(state.folderSelection)){state.folderSelection='all';state.includeDescendants=false;}
     state.expandedFolders=new Set([...state.expandedFolders].filter(id=>folderById(id)));
     if(folderById(state.folderSelection))expandAncestors(state.folderSelection);
@@ -523,8 +563,13 @@ async function saveFolder(e){
       method:editing?'PATCH':'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({name,parentId})
     });
-    $('folderEditor').close();await loadFolders();
+    // Do not immediately re-list KV: the edge can still return the old state.
+    if(!result.folder?.id)throw Error('服务器没有返回相册信息');
+    recordConfirmedFolderWrite(editing?'upsert':'create',result.folder);
+    state.folders=[...state.folders.filter(f=>f.id!==result.folder.id),result.folder];
+    $('folderEditor').close();
     selectFolder(result.folder.id);
+    $('status').textContent=editing?'相册修改已保存。':'相册创建成功，可以立即继续操作。';
     toast(editing?'相册已更新':'相册创建成功');
   }catch(error){toast('保存失败：'+error.message);}
   finally{button.disabled=false;button.textContent=editing?'保存修改':'创建相册';}
@@ -544,6 +589,7 @@ async function deleteSelectedFolder(){
     await api('/api/manage/folders/'+folder.id,{method:'DELETE'});
     // KV listings can be briefly stale after a write. Once the DELETE API
     // confirms success, update the tree in memory instead of fetching it again.
+    recordConfirmedFolderWrite('delete',folder);
     state.folders=state.folders.filter(f=>f.id!==folder.id);
     state.expandedFolders.delete(folder.id);
     if(state.folderSelection===folder.id){
