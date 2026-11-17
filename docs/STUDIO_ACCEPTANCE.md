@@ -43,3 +43,12 @@ The local fixture server now also uses ephemeral Miniflare R2. Logged in with it
 - Isolated Preview migration 0004 applied; all 9 current KV media keys covered by derived inventory. Editable metadata row/version/deletion aggregates unchanged; foreign_key_check empty. Catalog readiness enabled only after those checks. No environment variables or credentials changed.
 - Full authenticated remote search/browser acceptance remains distinct from local fixture acceptance. Deployment build/unauthenticated HTTP verification must be reported separately. Remote Preview uploads remain intentionally disabled.
 - Tag suggestions are capped at 500, with exact typed input supported. Concurrent edits may change matches between pages; keyset pagination is not a whole-session snapshot.
+
+
+## Global tags — 2026-11-17
+
+- Owner accepted existing remote full-library search, editable details and cross-page bulk workflows and requested the next module. This is owner-reported acceptance.
+- Complete local suite: 197 passing. Global tag integration covers distinct counts/current overlays, complete rename, explicit merge/deduplication, atomic rollback, tombstones, folder preservation, version conflicts, concurrent additive edits, 100-tag pagination, wildcard literals and request/auth validation. UI tests cover invalid/unconfirmed operations, duplicate submit protection, failed drafts, uncertain-write refresh, stale responses and frozen pagination queries.
+- Browser saw global counts of 106 Fixture media plus 1 Global-only across 107 disposable samples. An old native confirm blocked browser automation; confirmation is now an in-page checkbox. Browser write-to-refresh acceptance of the revised control is still outstanding.
+- Separate HTTP acceptance through real local management middleware/handlers: renamed Fixture on 106 records, merged Global-only into Organized on 1, final usage count 107, immediate exact-tag search 107 and old-tag search 0. Local fixture credentials/storage only. No real Preview or Production tags changed.
+- Preview deployment and unauthenticated HTTP checks are reported separately; successful build does not replace authenticated global tag browser acceptance.

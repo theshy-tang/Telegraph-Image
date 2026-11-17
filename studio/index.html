@@ -194,6 +194,7 @@ body.working button[data-action]{opacity:.6}
 .tag-choices{display:flex;flex-wrap:wrap;gap:8px;max-height:240px;overflow:auto;padding:4px}.tag-choice{display:flex;align-items:center;gap:6px;border:1px solid #dfe5f1;border-radius:12px;padding:8px 10px;cursor:pointer}.tag-choice input{width:auto;margin:0}.tag-choice:has(input:checked){background:#edf2ff;border-color:#7899ea}
 #preview{width:95vw;max-width:min(1120px,95vw);max-height:92vh;overflow:auto}#preview .modalbody{grid-template-columns:minmax(0,1.4fr) minmax(300px,1fr);align-items:start}#preview .modalbody img,#preview .modalbody video{max-height:76vh}.detail-fields{border:0;margin:0;padding:0;min-width:0;display:flex;flex-direction:column;gap:12px}.detail-fields hr{border:0;border-top:1px solid #e8edf5;width:100%;margin:5px 0}.detail-meta{color:#8996ab;font-size:12px}.detail-label{display:flex;flex-direction:column;gap:5px;font-weight:600}.detail-label input,.detail-label select,.detail-add input{width:100%;box-sizing:border-box;min-width:0}.detail-section-title{font-weight:700;margin-top:8px}.detail-tags{display:flex;flex-wrap:wrap;gap:8px}.detail-tag{display:inline-flex;align-items:center;border:1px solid #dce5f4;background:#edf2fb;border-radius:9px;max-width:100%}.detail-tag button{border:0;background:transparent;padding:5px 7px;box-shadow:none;border-radius:7px;color:#425e8d;overflow-wrap:anywhere}.detail-tag input{width:145px;max-width:100%}.detail-add{display:flex;gap:8px}.detail-add button{white-space:nowrap}.detail-actions{display:flex;gap:8px;flex-wrap:wrap}@media(max-width:760px){#preview .modalbody{grid-template-columns:1fr}#preview .modalbody img,#preview .modalbody video{max-height:45vh}}
 .catalog-dialog{width:95vw;max-width:min(1050px,95vw);max-height:90vh;overflow:auto}.catalog-form{padding:10px 24px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.catalog-form label{display:flex;flex-direction:column;gap:5px;font-size:13px;font-weight:600}.catalog-form input,.catalog-form select{min-width:0;width:100%;box-sizing:border-box}.catalog-form .catalog-descendants{flex-direction:row;align-items:center}.catalog-descendants input{width:auto}.catalog-summary{padding:15px 24px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;color:#63748f;font-size:13px}.catalog-summary span{flex:1}.catalog-results{padding:0 24px 22px;display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:14px}.catalog-result{position:relative;border:1px solid #e3e9f3;border-radius:16px;overflow:hidden}.catalog-result>input{position:absolute;left:10px;top:10px;z-index:1;width:18px;height:18px;cursor:pointer}.catalog-preview{width:100%;height:100%;border:0;box-shadow:none;background:white;text-align:left;display:flex;flex-direction:column;gap:7px;padding:12px}.catalog-preview img{width:100%;height:125px;object-fit:cover;border-radius:9px}.catalog-preview strong{overflow-wrap:anywhere}.catalog-preview .muted{font-size:12px}@media(max-width:700px){.catalog-form{grid-template-columns:1fr 1fr}.catalog-results{grid-template-columns:1fr 1fr}}
+.global-tag-confirm{display:flex;gap:8px;align-items:flex-start;font-size:13px}.global-tag-confirm input{width:auto!important;flex:none;margin-top:3px}.global-tag-rows{display:flex;flex-direction:column;gap:8px;max-height:35vh;overflow:auto}.global-tag-row{display:flex;gap:8px;align-items:center;border:1px solid #e3e9f3;border-radius:12px;padding:10px}.global-tag-row strong{flex:1;overflow-wrap:anywhere}.global-tag-row span{white-space:nowrap;color:#76859c;font-size:13px}.global-tag-row button{padding:7px 10px}.global-tag-rows+button{margin-top:10px}#tagManagerEdit{margin-top:14px}#tagManagerEdit input,#tagManagerEdit select{width:100%;box-sizing:border-box}@media(max-width:600px){.global-tag-row{flex-wrap:wrap}.global-tag-row strong{flex-basis:55%}}
 </style>
 </head>
 <body>
@@ -245,7 +246,7 @@ body.working button[data-action]{opacity:.6}
 </div>
 <section class="panel">
 <div id="childFolders" class="child-folder-region hidden" aria-label="当前相册的子文件夹"></div>
-<div class="heading"><div><h2>素材资源管理</h2><div class="muted" id="resultCount" style="margin-top:5px">加载中...</div></div><div class="toolbar"><button id="globalSearchOpen" type="button" class="ghost" disabled title="全库索引准备好后可用">⌕ 全库检索</button><button id="selectPage" class="ghost">✓ 全选当前结果</button></div></div>
+<div class="heading"><div><h2>素材资源管理</h2><div class="muted" id="resultCount" style="margin-top:5px">加载中...</div></div><div class="toolbar"><button id="tagManagerOpen" type="button" class="ghost" disabled>标签管理</button><button id="globalSearchOpen" type="button" class="ghost" disabled title="全库索引准备好后可用">⌕ 全库检索</button><button id="selectPage" class="ghost">✓ 全选当前结果</button></div></div>
 <div class="toolbar"><input id="search" class="search" placeholder="⌕ 搜索文件名、标签、相册..." aria-label="搜索素材"><select id="tagFilter" aria-label="按标签筛选"><option value="">全部标签</option></select><select id="albumFilter" title="旧版标签式相册（兼容旧数据）"><option value="">旧版相册标签</option></select><select id="order"><option value="new">最新上传</option><option value="old">最早上传</option><option value="name">名称排序</option></select></div>
 <div class="filterbar"><div class="toolbar" id="chips"><button data-chip="all" class="chip on">全部</button><button data-chip="image" class="chip">图片</button><button data-chip="video" class="chip">视频</button><button data-chip="favorites" class="chip">收藏</button><button data-chip="published" class="chip">AI 已发布</button></div><span class="muted" id="selectedInfo">未选择</span></div>
 <div id="bulkbar" class="bulkbar hidden"><span class="count" id="selectedCount">已选择 0 项</span><button data-action="favorite">♡ 收藏</button><button data-action="unfavorite">取消收藏</button><button data-action="add_tags">＋ 标签</button><button data-action="remove_tags">－ 标签</button><button data-action="move_folder">▤ 移入相册</button><button data-action="clear_folder">移出相册</button><button data-action="set_category">分类</button><button data-action="publish">✧ 发布 AI</button><button data-action="unpublish">撤销 AI 发布</button><button id="clearSelection">清除选择</button></div>
@@ -259,6 +260,18 @@ body.working button[data-action]{opacity:.6}
 </section>
 </main>
 </div>
+<dialog id="tagManager" class="catalog-dialog" aria-labelledby="tagManagerTitle">
+<div class="modalhead"><strong id="tagManagerTitle">全局标签管理</strong><button type="button" class="close" id="tagManagerClose" aria-label="关闭标签管理">×</button></div>
+<div class="folder-fields"><p class="muted">统计整个素材库。重命名与合并会影响所有使用该标签的素材，操作后刷新素材列表并清空当前选择。</p>
+<form id="tagManagerSearch" class="toolbar"><input id="tagManagerQuery" maxlength="48" placeholder="搜索全库标签" aria-label="搜索全库标签"><button type="submit" class="ghost">搜索标签</button></form>
+<p id="tagManagerStatus" role="status"></p><div id="tagManagerRows" class="global-tag-rows"></div><button id="tagManagerMore" type="button" class="ghost" disabled>载入更多标签</button>
+<form id="tagManagerEdit"><fieldset id="tagManagerFields" class="detail-fields"><hr>
+<label class="detail-label">源标签<input id="tagManagerSource" readonly placeholder="先从上方选择标签"></label>
+<label class="detail-label">操作<select id="tagManagerAction"><option value="rename">全局重命名为新标签</option><option value="merge">合并到已有标签</option></select></label>
+<label class="detail-label">目标标签<input id="tagManagerTarget" maxlength="48" required list="tagManagerOptions" placeholder="输入新的名称或已有标签"><datalist id="tagManagerOptions"></datalist></label>
+<label class="global-tag-confirm"><input type="checkbox" id="tagManagerConfirm">我确认将以上标签变更应用到整个素材库，并刷新列表与清空选择</label>
+<p id="tagManagerEditStatus" role="status" class="notice"></p><button type="submit" class="primary" id="tagManagerSave" disabled>应用到全库</button></fieldset></form>
+</div></dialog>
 <dialog id="catalogDialog" class="catalog-dialog" aria-labelledby="catalogTitle">
 <div class="modalhead"><strong id="catalogTitle">全库检索</strong><button type="button" class="close" id="catalogClose" aria-label="关闭全库检索">×</button></div>
 <form id="catalogForm" class="catalog-form">
@@ -772,6 +785,58 @@ function setChip(chip){
   if(state.folderSelection==='all')$('pageTitle').textContent=({all:'全部素材',image:'图片',video:'视频',favorites:'我的收藏',published:'AI 已发布'})[chip]||'全部素材';
   render();
 }
+const tagManagerState={items:[],after:null,query:'',loading:false,writing:false,generation:0,controller:null};
+function closeTagManager(){
+  if(tagManagerState.writing)return;
+  tagManagerState.controller?.abort();tagManagerState.generation++;$('tagManager').close();
+}
+function renderGlobalTags(){
+  const zone=$('tagManagerRows');zone.replaceChildren();const options=$('tagManagerOptions');options.replaceChildren();
+  for(const tag of tagManagerState.items){
+    const row=elt('div','global-tag-row'),edit=elt('button','ghost','管理'),browse=elt('button','ghost','查看素材');edit.type=browse.type='button';
+    edit.disabled=browse.disabled=tagManagerState.writing;
+    edit.addEventListener('click',()=>{$('tagManagerSource').value=tag.name;$('tagManagerTarget').value='';$('tagManagerConfirm').checked=false;$('tagManagerAction').value='rename';$('tagManagerSave').disabled=false;$('tagManagerEditStatus').textContent='当前使用 '+tag.count+' 项。实际影响范围以提交时的全库记录为准。';$('tagManagerTarget').focus();});
+    browse.addEventListener('click',()=>{closeTagManager();openCatalog(tag.name);});
+    row.append(elt('strong','',tag.name),elt('span','',tag.count+' 项素材'),edit,browse);zone.append(row);
+    const option=elt('option');option.value=tag.name;options.append(option);
+  }
+  if(!tagManagerState.items.length&&!tagManagerState.loading)zone.append(elt('p','muted','没有匹配的在用标签。'));
+}
+async function loadGlobalTags(reset=true){
+  if(tagManagerState.writing||(!reset&&tagManagerState.loading))return;
+  if(reset){tagManagerState.controller?.abort();tagManagerState.items=[];tagManagerState.after=null;tagManagerState.query=$('tagManagerQuery').value.trim();}
+  const generation=++tagManagerState.generation,controller=new AbortController();tagManagerState.controller=controller;tagManagerState.loading=true;$('tagManagerMore').disabled=true;$('tagManagerStatus').textContent='正在统计全库标签…';
+  try{
+    const params=new URLSearchParams({q:tagManagerState.query});if(tagManagerState.after)params.set('after',tagManagerState.after);
+    const r=await api('/api/manage/tags?'+params,{signal:controller.signal});if(generation!==tagManagerState.generation)return;
+    const names=new Set(tagManagerState.items.map(t=>t.name));for(const tag of r.tags)if(!names.has(tag.name)){tagManagerState.items.push(tag);names.add(tag.name);}
+    tagManagerState.after=r.after;$('tagManagerStatus').textContent='匹配 '+r.total+' 个标签，已显示 '+tagManagerState.items.length+' 个。';
+  }catch(error){if(generation===tagManagerState.generation&&error.name!=='AbortError')$('tagManagerStatus').textContent='读取失败：'+error.message;}
+  finally{if(generation===tagManagerState.generation){tagManagerState.loading=false;$('tagManagerMore').disabled=!tagManagerState.after;renderGlobalTags();}}
+}
+function openTagManager(){
+  if(state.busy)return;
+  $('tagManagerConfirm').checked=false;$('tagManagerQuery').value='';$('tagManagerSource').value='';$('tagManagerTarget').value='';$('tagManagerSave').disabled=true;$('tagManagerEditStatus').textContent='';$('tagManager').showModal();loadGlobalTags(true);
+}
+async function applyGlobalTag(event){
+  event.preventDefault();if(tagManagerState.writing||state.busy)return false;
+  const source=$('tagManagerSource').value,target=$('tagManagerTarget').value.trim(),action=$('tagManagerAction').value;
+  if(!source||!target||source===target||target.length>48||Array.from(target).some(c=>c.charCodeAt(0)<32||c.charCodeAt(0)===127||'<>'.includes(c))){$('tagManagerEditStatus').textContent='请选择源标签并填写不同的有效目标标签。';return false;}
+  if(!$('tagManagerConfirm').checked){$('tagManagerEditStatus').textContent='请先勾选确认，变更将影响全库匹配素材。';return false;}
+  tagManagerState.controller?.abort();tagManagerState.generation++;tagManagerState.loading=false;tagManagerState.writing=true;state.busy=true;setBusyUI(true);$('tagManagerFields').disabled=true;$('tagManagerClose').disabled=true;renderGlobalTags();$('tagManagerMore').disabled=true;
+  let success=false;
+  try{
+    const result=await api('/api/manage/tags',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,source,target})});
+    $('tagManagerEditStatus').textContent='已更新 '+result.changed+' 项素材。';$('tagManagerSource').value='';$('tagManagerTarget').value='';$('tagManagerSave').disabled=true;$('tagManagerConfirm').checked=false;success=true;
+  }catch(error){$('tagManagerEditStatus').textContent='操作未确认：'+error.message+'。请核对标签统计；输入已保留。';}
+  finally{
+    // Reload authoritative documents even after a timeout: the write may have committed.
+    catalogSearch.controller?.abort();catalogSearch.requestId++;catalogSearch.items=[];catalogSearch.seen.clear();catalogSearch.cursor=null;catalogSearch.busy=false;
+    state.busy=false;setBusyUI(false);await loadPage(true);
+    tagManagerState.writing=false;$('tagManagerFields').disabled=false;$('tagManagerClose').disabled=false;await loadGlobalTags(true);
+  }
+  return success;
+}
 const catalogSearch={items:[],seen:new Set(),cursor:null,filters:null,total:0,busy:false,controller:null,requestId:0};
 function catalogFilters(){
   return {q:$('catalogQuery').value.trim(),tag:$('catalogTag').value.trim(),view:$('catalogView').value,folder:$('catalogFolder').value,descendants:String($('catalogDescendants').checked),order:$('catalogOrder').value,album:$('catalogAlbum').value.trim()};
@@ -814,11 +879,11 @@ async function searchCatalog(reset=true){
   }catch(error){if(requestId===catalogSearch.requestId&&error.name!=='AbortError')$('catalogStatus').textContent='检索失败：'+error.message;return false;}
   finally{if(requestId===catalogSearch.requestId){catalogSearch.busy=false;$('catalogMore').disabled=!catalogSearch.cursor;renderCatalogResults();}}
 }
-function openCatalog(){
+function openCatalog(exactTag){
   if(state.busy)return;
   $('catalogAlbum').value=$('albumFilter').value;$('catalogQuery').value=$('search').value;$('catalogTag').value=$('tagFilter').value;$('catalogView').value=state.chip;$('catalogOrder').value=$('order').value;
   const folders=$('catalogFolder');folderOptions(folders,null,'未归类');folders.options[0].value='unfiled';folders.add(new Option('全部相册','all'),0);folders.value=state.folderSelection;
-  $('catalogDescendants').checked=state.includeDescendants;$('catalogDialog').showModal();searchCatalog(true);
+  $('catalogDescendants').checked=state.includeDescendants;if(typeof exactTag==='string'){$('catalogTag').value=exactTag;$('catalogQuery').value='';$('catalogAlbum').value='';$('catalogView').value='all';folders.value='all';$('catalogDescendants').checked=false;}$('catalogDialog').showModal();searchCatalog(true);
 }
 let detailSession=null;
 function detailTagList(tags){
@@ -1073,11 +1138,18 @@ $('loginForm').addEventListener('submit',async e=>{
     try{json=JSON.parse(body);}
     catch{throw Error('后台返回的不是 JSON，请检查 Preview 的 KV 绑定和 Pages Functions。响应开头：'+body.slice(0,70));}
     if(!Array.isArray(json.keys))throw Error('图床后台返回的数据格式不正确，请检查 KV 配置。');
-    $('globalSearchOpen').disabled=true;
-    state.auth=candidate;$('pass').value='';$('auth').classList.add('hidden');$('app').classList.remove('hidden');if(IS_PREVIEW){$('uploadBtn').disabled=true;$('uploadBtn').title='预览环境仅同步正式图片目录，不允许上传，避免测试数据和真实 Telegram 存储混用';}await loadFolders();await loadPage();$('globalSearchOpen').disabled=!json.catalogReady;$('globalSearchOpen').title=json.catalogReady?'按全库索引检索，不必先加载所有页面':'当前环境的全库索引尚未启用';
+    $('globalSearchOpen').disabled=true;$('tagManagerOpen').disabled=true;
+    state.auth=candidate;$('pass').value='';$('auth').classList.add('hidden');$('app').classList.remove('hidden');if(IS_PREVIEW){$('uploadBtn').disabled=true;$('uploadBtn').title='预览环境仅同步正式图片目录，不允许上传，避免测试数据和真实 Telegram 存储混用';}await loadFolders();await loadPage();$('globalSearchOpen').disabled=!json.catalogReady;$('tagManagerOpen').disabled=!json.catalogReady;$('globalSearchOpen').title=json.catalogReady?'按全库索引检索，不必先加载所有页面':'当前环境的全库索引尚未启用';
   }catch(err){$('loginError').textContent=err.message;}
 });
 $('globalSearchOpen').addEventListener('click',openCatalog);
+$('tagManagerOpen').addEventListener('click',openTagManager);
+$('tagManagerClose').addEventListener('click',closeTagManager);
+$('tagManager').addEventListener('cancel',event=>{if(tagManagerState.writing){event.preventDefault();return;}tagManagerState.controller?.abort();tagManagerState.generation++;});
+$('tagManagerSearch').addEventListener('submit',event=>{event.preventDefault();loadGlobalTags(true);});
+$('tagManagerMore').addEventListener('click',()=>loadGlobalTags(false));
+$('tagManagerEdit').addEventListener('submit',applyGlobalTag);
+for(const id of ['tagManagerTarget','tagManagerAction'])$(id).addEventListener('input',()=>{$('tagManagerConfirm').checked=false;});
 $('catalogClose').addEventListener('click',closeCatalog);
 $('catalogUseSelection').addEventListener('click',closeCatalog);
 $('catalogDialog').addEventListener('cancel',()=>{catalogSearch.controller?.abort();catalogSearch.requestId++;catalogSearch.busy=false;render();renderFolders();});

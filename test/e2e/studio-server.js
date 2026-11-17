@@ -11,7 +11,7 @@ const {createStudioDB}=require('../studio-runtime');const {createMockKV}=require
  await env.img_url.put('zzzzz_target.jpg','',{metadata:{fileName:'Unloaded target',tags:['Global-only'],albums:[],TimeStamp:1700000000200}});
  for(const key of (await env.img_url.list({limit:1000})).keys)await catalog.indexStudioMedia(env,key.name,key.metadata);
  await runtime.db.prepare('UPDATE studio_catalog_state SET ready=1 WHERE id=1').run();
- const search=await import('../../functions/api/manage/search.js');
+ const search=await import('../../functions/api/manage/search.js');const tags=await import('../../functions/api/manage/tags.js');
  const manage=await import('../../functions/api/manage/_middleware.js');
  const collection=await import('../../functions/api/manage/folders.js');const detail=await import('../../functions/api/manage/folders/[id].js');
  const upload=await import('../../functions/api/manage/upload.js');
@@ -24,7 +24,8 @@ const {createStudioDB}=require('../studio-runtime');const {createMockKV}=require
    const chunks=[];for await(const chunk of req)chunks.push(chunk);
    const request=new Request(url,{method:req.method,headers:req.headers,...(!['GET','HEAD'].includes(req.method)?{body:Buffer.concat(chunks)}:{})});
    const id=decodeURIComponent(url.pathname.split('/').pop());let handler;
-   if(url.pathname==='/api/manage/search')handler=search.onRequestGet;
+   if(url.pathname==='/api/manage/tags')handler=req.method==='GET'?tags.onRequestGet:tags.onRequestPost;
+   else if(url.pathname==='/api/manage/search')handler=search.onRequestGet;
    else if(url.pathname==='/api/manage/upload')handler=upload.onRequestPost;
    else if(url.pathname==='/api/manage/list')handler=list.onRequest;
    else if(url.pathname==='/api/manage/bulk')handler=bulk.onRequestPost;
