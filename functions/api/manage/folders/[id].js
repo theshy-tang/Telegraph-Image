@@ -1,3 +1,4 @@
+import {hasStudioD1,listStudioFolders,getStudioFolder} from '../../../utils/studio-d1.js';
 import {
   allFolders, folderResponse, folderReady, safeMutation, parseFolderBody,
   folderName, folderId, folderKey, siblingExists, createsCycle,
@@ -18,7 +19,7 @@ export async function onRequestPatch({request,env,params}) {
     return folderResponse({error:'Invalid parent folder'},400);
 
   try {
-    const folders=await allFolders(env.img_url);
+    const folders=hasStudioD1(env)?await listStudioFolders(env.MEDIA_STUDIO_DB):await allFolders(env.img_url);
     const current=folders.find(f=>f.id===id);
     if(!current)return folderResponse({error:'Folder not found'},404);
     const name=Object.hasOwn(input,'name')?folderName(input.name):current.name;
@@ -32,10 +33,17 @@ export async function onRequestPatch({request,env,params}) {
     const descendants=(node)=>{const children=folders.filter(f=>f.parentId===node);return children.length?1+Math.max(...children.map(f=>descendants(f.id))):0;};
     if(depth+descendants(id)>7)return folderResponse({error:'Moving subtree would exceed maximum depth'},400);
 
-    const persisted=await env.img_url.getWithMetadata(folderKey(id));
-    if(!persisted?.metadata)return folderResponse({error:'Folder not found'},404);
-    const updated={...persisted.metadata,id,name,parentId,updatedAt:Date.now()};
-    await env.img_url.put(folderKey(id),persisted.value??'1',{metadata:updated});
+    const updated={...current,id,name,parentId,updatedAt:Date.now()};
+    if(hasStudioD1(env)) {
+      const res=await env.MEDIA_STUDIO_DB.prepare(
+        'UPDATE studio_folders SET name = ?, parent_id = ?, updated_at = ? WHERE id = ?'
+      ).bind(name,parentId,updated.updatedAt,id).run();
+      if(!res.meta?.changes)return folderResponse({error:'Folder not found'},404);
+    }else{
+      const persisted=await env.img_url.getWithMetadata(folderKey(id));
+      if(!persisted?.metadata)return folderResponse({error:'Folder not found'},404);
+      await env.img_url.put(folderKey(id),persisted.value??'1',{metadata:{...persisted.metadata,...updated}});
+    }
     return folderResponse({folder:updated});
   }catch(e){console.error('Update folder failed',e);return folderResponse({error:'Failed to update folder'},503);}
 }
@@ -46,6 +54,18 @@ export async function onRequestDelete({request,env,params}) {
   const id=params.id;
   if(!folderId(id))return folderResponse({error:'Invalid folder ID'},400);
   try {
+    if(hasStudioD1(env)){
+      const db=env.MEDIA_STUDIO_DB;
+      const exists=await getStudioFolder(db,id);
+      if(!exists)return folderResponse({error:'Folder not found'},404);
+      // Atomic guarded deletion: concurrent moves or child creation cannot slip
+      // between an application-side check and the delete statement.
+      const res=await db.prepare(
+        'DELETE FROM studio_folders WHERE id = ? AND NOT EXISTS (SELECT 1 FROM studio_folders WHERE parent_id = ?) AND NOT EXISTS (SELECT 1 FROM studio_media_folders WHERE folder_id = ?)'
+      ).bind(id,id,id).run();
+      if(res.meta?.changes===1)return folderResponse({deleted:id});
+      return folderResponse({error:'Folder contains children or media'},409);
+    }
     // Independent safety checks run concurrently. Deletion still happens only
     // after confirming both that there are no child folders and no media.
     const [folders, hasMedia] = await Promise.all([
