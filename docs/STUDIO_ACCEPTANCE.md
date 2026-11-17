@@ -61,3 +61,12 @@ The local fixture server now also uses ephemeral Miniflare R2. Logged in with it
 - Actual local browser acceptance on isolated R2 fixtures: detail action opens single-file mode; original PNG saved; ZIP saved; JSON and CSV saved. Then selected two full-library results and downloaded through the bulk toolbar as one ZIP.
 - Disk readback: original 68 bytes; two ZIP entries both byte-identical to the original and CRC valid; exported JSON current tag Download; CSV parsed as header plus one record, each 14 columns. No real Telegram credentials or media were used.
 - Limits are explicit product policy, not provider limits: 100 files and 100 MiB total per ZIP; 50 MiB per file (also single-file mode); metadata at most 1000 items, fetched in batches of 50. Remote authenticated real-media download still needs user acceptance; build/unauthenticated runtime checks are separate.
+
+
+## Index maintenance — 2026-11-17
+
+- Owner accepted download/export and requested the next module.
+- Complete local suite: 227 passing, including 13 new maintenance/checkpoint regressions. Failure injection verifies no partial page writes; stale KV cannot overwrite D1 edits, versions, tombstones or folder ownership. Missing metadata and stalled cursors fail instead of skipping data.
+- Browser fixture on a separate local server: 109 KV media, initially only 108 inventory rows. Exact search for Index repair fixture initially 0. Manual scan completed 2 pages/109 media and added 1 inventory record. Current index 109; exact search 1. Reload/relogin preserved the completed checkpoint; repeat full scan changed 0.
+- Checkpoint interruption and uncertain-outcome retries were exercised in UI regression tests; the browser acceptance covered completed-checkpoint restore, not a forced network outage mid-page.
+- No real Preview user records were used for scan writes. Tool is manually started, then paginates automatically; no scheduled job. It requires the already-ready catalog. KV eventual consistency means repeated scans may be needed for concurrent external writes; absence never triggers deletion.

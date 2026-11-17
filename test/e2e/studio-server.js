@@ -7,6 +7,7 @@ const {createStudioDB}=require('../studio-runtime');const {createMockKV}=require
  const env={BASIC_USER:'studio-test',BASIC_PASS:'local-test',MEDIA_STUDIO_DB:runtime.db,STORAGE_PROVIDER:'r2',img_r2:runtime.bucket,MEDIA_STUDIO_METADATA_D1:'true',SHOPIFY_AI_CATALOG_ENABLED:'true',img_url:createMockKV({'sample.jpg':{fileName:'Local sample.jpg',tags:['Fixture'],albums:[],liked:false,aiPublished:false,fileSize:100,TimeStamp:1700000000000}})};
  await runtime.bucket.put('r2-download.png',new Uint8Array(Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jhT8AAAAASUVORK5CYII=','base64')),{httpMetadata:{contentType:'image/png'}});
  await env.img_url.put('r2-download.png','',{metadata:{fileName:'Download fixture.png',tags:['Download'],albums:[],fileSize:68,TimeStamp:1700000000300}});
+ const sync=await import('../../functions/api/manage/catalog-sync.js');
  const exported=await import('../../functions/api/manage/export.js');const download=await import('../../functions/api/manage/download/[id].js');
  const catalog=await import('../../functions/utils/studio-catalog.js');
  // A fixture beyond the first 100 KV records makes unloaded-result acceptance reproducible.
@@ -14,6 +15,7 @@ const {createStudioDB}=require('../studio-runtime');const {createMockKV}=require
  await env.img_url.put('zzzzz_target.jpg','',{metadata:{fileName:'Unloaded target',tags:['Global-only'],albums:[],TimeStamp:1700000000200}});
  for(const key of (await env.img_url.list({limit:1000})).keys)await catalog.indexStudioMedia(env,key.name,key.metadata);
  await runtime.db.prepare('UPDATE studio_catalog_state SET ready=1 WHERE id=1').run();
+ await env.img_url.put('unindexed.jpg','',{metadata:{fileName:'Index repair fixture.jpg',tags:['Index-repair'],TimeStamp:1700000000400}});
  const search=await import('../../functions/api/manage/search.js');const tags=await import('../../functions/api/manage/tags.js');
  const manage=await import('../../functions/api/manage/_middleware.js');
  const collection=await import('../../functions/api/manage/folders.js');const detail=await import('../../functions/api/manage/folders/[id].js');
@@ -28,7 +30,8 @@ const {createStudioDB}=require('../studio-runtime');const {createMockKV}=require
    const chunks=[];for await(const chunk of req)chunks.push(chunk);
    const request=new Request(url,{method:req.method,headers:req.headers,...(!['GET','HEAD'].includes(req.method)?{body:Buffer.concat(chunks)}:{})});
    const id=decodeURIComponent(url.pathname.split('/').pop());let handler;
-   if(url.pathname==='/api/manage/export')handler=exported.onRequestPost;
+   if(url.pathname==='/api/manage/catalog-sync')handler=req.method==='GET'?sync.onRequestGet:sync.onRequestPost;
+   else if(url.pathname==='/api/manage/export')handler=exported.onRequestPost;
    else if(url.pathname.startsWith('/api/manage/download/'))handler=download.onRequestGet;
    else if(url.pathname==='/api/manage/tags')handler=req.method==='GET'?tags.onRequestGet:tags.onRequestPost;
    else if(url.pathname==='/api/manage/search')handler=search.onRequestGet;

@@ -246,7 +246,7 @@ body.working button[data-action]{opacity:.6}
 </div>
 <section class="panel">
 <div id="childFolders" class="child-folder-region hidden" aria-label="当前相册的子文件夹"></div>
-<div class="heading"><div><h2>素材资源管理</h2><div class="muted" id="resultCount" style="margin-top:5px">加载中...</div></div><div class="toolbar"><button id="tagManagerOpen" type="button" class="ghost" disabled>标签管理</button><button id="globalSearchOpen" type="button" class="ghost" disabled title="全库索引准备好后可用">⌕ 全库检索</button><button id="selectPage" class="ghost">✓ 全选当前结果</button></div></div>
+<div class="heading"><div><h2>素材资源管理</h2><div class="muted" id="resultCount" style="margin-top:5px">加载中...</div></div><div class="toolbar"><button id="indexMaintenanceOpen" type="button" class="ghost" disabled>索引维护</button><button id="tagManagerOpen" type="button" class="ghost" disabled>标签管理</button><button id="globalSearchOpen" type="button" class="ghost" disabled title="全库索引准备好后可用">⌕ 全库检索</button><button id="selectPage" class="ghost">✓ 全选当前结果</button></div></div>
 <div class="toolbar"><input id="search" class="search" placeholder="⌕ 搜索文件名、标签、相册..." aria-label="搜索素材"><select id="tagFilter" aria-label="按标签筛选"><option value="">全部标签</option></select><select id="albumFilter" title="旧版标签式相册（兼容旧数据）"><option value="">旧版相册标签</option></select><select id="order"><option value="new">最新上传</option><option value="old">最早上传</option><option value="name">名称排序</option></select></div>
 <div class="filterbar"><div class="toolbar" id="chips"><button data-chip="all" class="chip on">全部</button><button data-chip="image" class="chip">图片</button><button data-chip="video" class="chip">视频</button><button data-chip="favorites" class="chip">收藏</button><button data-chip="published" class="chip">AI 已发布</button></div><span class="muted" id="selectedInfo">未选择</span></div>
 <div id="bulkbar" class="bulkbar hidden"><span class="count" id="selectedCount">已选择 0 项</span><button data-action="favorite">♡ 收藏</button><button data-action="unfavorite">取消收藏</button><button data-action="add_tags">＋ 标签</button><button data-action="remove_tags">－ 标签</button><button data-action="move_folder">▤ 移入相册</button><button data-action="clear_folder">移出相册</button><button data-action="set_category">分类</button><button data-action="publish">✧ 发布 AI</button><button data-action="unpublish">撤销 AI 发布</button><button id="exportSelected" type="button">下载 / 导出</button><button id="clearSelection">清除选择</button></div>
@@ -260,6 +260,12 @@ body.working button[data-action]{opacity:.6}
 </section>
 </main>
 </div>
+<dialog id="indexMaintenance" class="folder-dialog" aria-labelledby="indexMaintenanceTitle">
+<div class="modalhead"><strong id="indexMaintenanceTitle">索引检查与补齐</strong><button type="button" class="close" id="indexMaintenanceClose" aria-label="关闭索引维护">×</button></div>
+<div class="folder-fields"><p class="muted">检查整个 KV 媒体目录，补齐全库检索清单。仅更新派生索引，不覆盖已编辑资料或删除标记，也不删除扫描中暂未出现的记录。</p><p id="indexStats" role="status">读取统计中…</p><p id="indexProgress" role="status"></p>
+<p class="muted" id="indexCheckpointHint">检查点保留在本标签页，刷新并重新登录后可继续。若旧游标失效，请从头重新检查。</p>
+<p class="muted">KV 具有最终一致性；本次检查结束不保证并发上传已经全部可见。可在稍后再次检查。发现归属或资料缺少索引时只报告数量，不删除数据。</p></div>
+<div class="folder-dialog-actions"><button type="button" class="ghost" id="indexRestart">从头重新检查</button><button type="button" class="ghost" id="indexPause" disabled>暂停</button><button type="button" class="primary" id="indexResume">开始检查并补齐</button></div></dialog>
 <dialog id="exportDialog" class="folder-dialog" aria-labelledby="exportTitle">
 <div class="modalhead"><strong id="exportTitle">下载与导出</strong><button id="exportClose" type="button" class="close" aria-label="关闭下载与导出">×</button></div>
 <form id="exportForm"><div class="folder-fields"><p id="exportSummary"></p><fieldset id="exportFields" class="detail-fields"><label class="detail-label">导出格式<select id="exportFormat"><option value="file">单个原文件</option><option value="zip">原文件 ZIP 打包</option><option value="json">素材资料 JSON</option><option value="csv">素材资料 CSV</option></select></label>
@@ -791,6 +797,52 @@ function setChip(chip){
   if(state.folderSelection==='all')$('pageTitle').textContent=({all:'全部素材',image:'图片',video:'视频',favorites:'我的收藏',published:'AI 已发布'})[chip]||'全部素材';
   render();
 }
+const indexScan={cursor:null,pages:0,keys:0,media:0,changed:0,complete:false,running:false,controller:null,statsGeneration:0};
+function saveIndexCheckpoint(){
+  try{sessionStorage.setItem('studio-index-checkpoint-v1',JSON.stringify({version:1,cursor:indexScan.cursor,pages:indexScan.pages,keys:indexScan.keys,media:indexScan.media,changed:indexScan.changed,complete:indexScan.complete}));}
+  catch{$('indexCheckpointHint').textContent='浏览器未允许保留检查点，本次进度只在当前页面有效。';}
+}
+function restoreIndexCheckpoint(){
+  try{
+    const p=JSON.parse(sessionStorage.getItem('studio-index-checkpoint-v1'));
+    if(!p||p.version!==1||typeof p.complete!=='boolean'||(p.cursor!==null&&(typeof p.cursor!=='string'||p.cursor.length>4096||!p.cursor))||!['pages','keys','media','changed'].every(k=>Number.isSafeInteger(p[k])&&p[k]>=0))return;
+    for(const k of ['cursor','pages','keys','media','changed','complete'])indexScan[k]=p[k];
+  }catch{}
+}
+function updateIndexControls(){
+  $('indexResume').disabled=indexScan.running||indexScan.complete;$('indexRestart').disabled=indexScan.running;$('indexPause').disabled=!indexScan.running;
+  $('indexResume').textContent=indexScan.complete?'本轮已完成':indexScan.pages?'继续上次扫描':'开始检查并补齐';
+}
+async function loadIndexStats(){
+  const generation=++indexScan.statsGeneration;
+  try{const r=await api('/api/manage/catalog-sync');if(generation!==indexScan.statsGeneration||!$('indexMaintenance').open)return;
+    $('indexStats').textContent='索引 '+r.indexed+' 条 · 可检索 '+r.visible+' 条 · 删除标记 '+r.tombstones+' 条。缺少索引的资料 '+r.editableWithoutInventory+' 条、相册归属 '+r.membershipsWithoutInventory+' 条。';
+  }catch(error){if(generation===indexScan.statsGeneration&&$('indexMaintenance').open)$('indexStats').textContent='统计读取失败：'+error.message;}
+}
+function openIndexMaintenance(){
+  if(state.busy)return;restoreIndexCheckpoint();$('indexProgress').textContent=indexScan.complete?'上次扫描已完成，可从头重新检查。':indexScan.pages?'已保留 '+indexScan.pages+' 页进度，可继续。':'尚未开始本轮扫描。';updateIndexControls();$('indexMaintenance').showModal();loadIndexStats();
+}
+function closeIndexMaintenance(){
+  if(indexScan.running){indexScan.controller.abort();return;}indexScan.statsGeneration++;$('indexMaintenance').close();
+}
+async function runIndexScan(restart=false){
+  if(indexScan.running||state.busy||(!restart&&indexScan.complete))return false;
+  if(restart){Object.assign(indexScan,{cursor:null,pages:0,keys:0,media:0,changed:0,complete:false});saveIndexCheckpoint();}
+  const controller=new AbortController();indexScan.controller=controller;indexScan.running=true;state.busy=true;setBusyUI(true);updateIndexControls();
+  let pages=0;
+  try{
+    while(!indexScan.complete&&pages<1000){
+      if(controller.signal.aborted)throw new DOMException('已暂停','AbortError');
+      const r=await api('/api/manage/catalog-sync',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({cursor:indexScan.cursor}),signal:controller.signal});
+      if(controller.signal.aborted)throw new DOMException('已暂停','AbortError');
+      if(typeof r.complete!=='boolean'||(r.complete?r.cursor!==null:(typeof r.cursor!=='string'||!r.cursor||r.cursor===indexScan.cursor))||!['scannedKeys','mediaKeys','changed'].every(k=>Number.isSafeInteger(r[k])&&r[k]>=0&&r[k]<=100))throw Error('返回的下一页位置无效');
+      indexScan.cursor=r.cursor;indexScan.complete=r.complete;indexScan.pages++;indexScan.keys+=r.scannedKeys;indexScan.media+=r.mediaKeys;indexScan.changed+=r.changed;pages++;saveIndexCheckpoint();
+      $('indexProgress').textContent='已确认 '+indexScan.pages+' 页 · 检查 '+indexScan.media+' 条媒体 · 新增或更新 '+indexScan.changed+' 条索引。';
+    }
+    $('indexProgress').textContent+=(indexScan.complete?' 本轮扫描完成，全库检索可立即查询补齐的素材。':' 已达到本次 1000 页上限，可继续扫描。');return indexScan.complete;
+  }catch(error){$('indexProgress').textContent=(error.name==='AbortError'?'扫描已暂停。':'扫描中断：'+error.message+'。')+' 已保留 '+indexScan.pages+' 页确认进度，可继续；未确认的页面会安全重试。';return false;}
+  finally{indexScan.running=false;state.busy=false;setBusyUI(false);updateIndexControls();if($('indexMaintenance').open)await loadIndexStats();}
+}
 const exportJob={ids:[],busy:false,controller:null};
 function saveExportBlob(blob,name){
   const url=URL.createObjectURL(blob),link=elt('a');link.href=url;link.download=name;document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);
@@ -1193,12 +1245,18 @@ $('loginForm').addEventListener('submit',async e=>{
     try{json=JSON.parse(body);}
     catch{throw Error('后台返回的不是 JSON，请检查 Preview 的 KV 绑定和 Pages Functions。响应开头：'+body.slice(0,70));}
     if(!Array.isArray(json.keys))throw Error('图床后台返回的数据格式不正确，请检查 KV 配置。');
-    $('globalSearchOpen').disabled=true;$('tagManagerOpen').disabled=true;
-    state.auth=candidate;$('pass').value='';$('auth').classList.add('hidden');$('app').classList.remove('hidden');if(IS_PREVIEW){$('uploadBtn').disabled=true;$('uploadBtn').title='预览环境仅同步正式图片目录，不允许上传，避免测试数据和真实 Telegram 存储混用';}await loadFolders();await loadPage();$('globalSearchOpen').disabled=!json.catalogReady;$('tagManagerOpen').disabled=!json.catalogReady;$('globalSearchOpen').title=json.catalogReady?'按全库索引检索，不必先加载所有页面':'当前环境的全库索引尚未启用';
+    $('globalSearchOpen').disabled=true;$('tagManagerOpen').disabled=true;$('indexMaintenanceOpen').disabled=true;
+    state.auth=candidate;$('pass').value='';$('auth').classList.add('hidden');$('app').classList.remove('hidden');if(IS_PREVIEW){$('uploadBtn').disabled=true;$('uploadBtn').title='预览环境仅同步正式图片目录，不允许上传，避免测试数据和真实 Telegram 存储混用';}await loadFolders();await loadPage();$('globalSearchOpen').disabled=!json.catalogReady;$('tagManagerOpen').disabled=!json.catalogReady;$('indexMaintenanceOpen').disabled=!json.catalogReady;$('globalSearchOpen').title=json.catalogReady?'按全库索引检索，不必先加载所有页面':'当前环境的全库索引尚未启用';
   }catch(err){$('loginError').textContent=err.message;}
 });
 $('globalSearchOpen').addEventListener('click',openCatalog);
 $('tagManagerOpen').addEventListener('click',openTagManager);
+$('indexMaintenanceOpen').addEventListener('click',openIndexMaintenance);
+$('indexMaintenanceClose').addEventListener('click',closeIndexMaintenance);
+$('indexMaintenance').addEventListener('cancel',event=>{if(indexScan.running){event.preventDefault();indexScan.controller.abort();}else indexScan.statsGeneration++;});
+$('indexResume').addEventListener('click',()=>runIndexScan(false));
+$('indexRestart').addEventListener('click',()=>runIndexScan(true));
+$('indexPause').addEventListener('click',()=>indexScan.controller?.abort());
 $('exportSelected').addEventListener('click',()=>openExport([...state.selected]));
 $('exportClose').addEventListener('click',closeExport);
 $('exportCancel').addEventListener('click',closeExport);
