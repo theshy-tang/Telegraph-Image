@@ -1,3 +1,4 @@
+import {cutoverManagement} from '../../utils/cutover.js';
 import {
     basicAuthentication,
     basicAuthChallengeResponse,
@@ -39,4 +40,4 @@ async function errorHandling(context) {
     return context.next();
   }
   
-  export const onRequest = [errorHandling, authentication];
+  export const onRequest = [errorHandling, authentication, cutoverManagement];

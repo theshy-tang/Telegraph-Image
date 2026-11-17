@@ -1,3 +1,4 @@
+import {cutoverReadOnly} from '../utils/cutover.js';
 import {uploadRequiresAuth} from '../utils/auth.js';
 import { jsonResponse } from '../utils/http.js';
 import { isShortUrlsEnabled } from '../utils/shortlink.js';
@@ -22,6 +23,6 @@ export async function onRequestGet(context) {
         setup: setup.checks,
         problems: setup.problems,
     }, {
-        headers: { 'Cache-Control': 'no-store' },
+        headers: { 'Cache-Control': 'no-store',...(cutoverReadOnly(env)?{'X-Media-Studio-Read-Only':'1'}:{}) },
     });
 }

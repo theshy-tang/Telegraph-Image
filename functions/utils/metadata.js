@@ -1,3 +1,4 @@
+import {cutoverReadOnly} from './cutover.js';
 import {metadataD1Enabled,readStudioMetadata} from './studio-metadata.js';
 export const LIST_TYPE = {
   NONE: 'None',
@@ -57,6 +58,7 @@ export async function getOrCreateMetadata(env, id) {
 }
 
 export async function putMetadata(env, id, metadata) {
+  if(cutoverReadOnly(env))return;
   await env.img_url.put(id, '', { metadata });
 }
 

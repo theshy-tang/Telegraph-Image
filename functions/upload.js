@@ -1,3 +1,4 @@
+import {cutoverReadOnly,cutoverResponse} from './utils/cutover.js';
 import {indexStudioMedia} from './utils/studio-catalog.js';
 import {readStudioUpload,studioUploadLimit,StudioUploadError} from './utils/studio-upload.js';
 import {metadataD1Enabled} from './utils/studio-metadata.js';
@@ -13,6 +14,7 @@ export async function onRequestPost(context) {
 
 export async function performUpload(context, options={}) {
     const { request, env } = context;
+    if(cutoverReadOnly(env))return cutoverResponse();
 
     try {
         const authResponse = authenticateUploadRequest(request, env);
