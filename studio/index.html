@@ -281,7 +281,7 @@ body.working button[data-action]{opacity:.6}
 (() => {
 'use strict';
 const $ = id => document.getElementById(id);
-const state = { auth:null,items:[],seen:new Set(),selected:new Set(),cursor:null,complete:false,busy:false,chip:'all',view:'all',limit:100,tiles:new Map(),folders:[],folderSelection:'all',editingFolderId:null,expandedFolders:new Set(),includeDescendants:false,deletingFolderId:null };
+const state = { auth:null,items:[],seen:new Set(),selected:new Set(),cursor:null,complete:false,busy:false,chip:'all',view:'all',limit:100,tiles:new Map(),folders:[],folderSelection:'all',editingFolderId:null,expandedFolders:new Set(),includeDescendants:false,deletingFolderId:null,folderBackend:'kv' };
 const IMG = /\.(png|jpe?g|gif|webp|bmp|tiff?|ico|avif|apng)$/i;
 const VID = /\.(mp4|webm|mov|ogg|m4v|mkv|avi)$/i;
 const safeText = v => String(v ?? '');
@@ -534,7 +534,11 @@ function applyConfirmedFolderWrites(serverFolders){
 async function loadFolders(){
   try{
     const r=await api('/api/manage/folders');
-    state.folders=applyConfirmedFolderWrites(Array.isArray(r.folders)?r.folders:[]);
+    state.folderBackend=r.backend==='d1'?'d1':'kv';
+    if(state.folderBackend==='d1')storePendingFolderWrites([]);
+    state.folders=state.folderBackend==='d1'
+      ? (Array.isArray(r.folders)?r.folders:[])
+      : applyConfirmedFolderWrites(Array.isArray(r.folders)?r.folders:[]);
     if(!['all','unfiled'].includes(state.folderSelection)&&!folderById(state.folderSelection)){state.folderSelection='all';state.includeDescendants=false;}
     state.expandedFolders=new Set([...state.expandedFolders].filter(id=>folderById(id)));
     if(folderById(state.folderSelection))expandAncestors(state.folderSelection);
@@ -565,7 +569,7 @@ async function saveFolder(e){
     });
     // Do not immediately re-list KV: the edge can still return the old state.
     if(!result.folder?.id)throw Error('服务器没有返回相册信息');
-    recordConfirmedFolderWrite(editing?'upsert':'create',result.folder);
+    if(state.folderBackend!=='d1')recordConfirmedFolderWrite(editing?'upsert':'create',result.folder);
     state.folders=[...state.folders.filter(f=>f.id!==result.folder.id),result.folder];
     $('folderEditor').close();
     selectFolder(result.folder.id);
@@ -589,7 +593,7 @@ async function deleteSelectedFolder(){
     await api('/api/manage/folders/'+folder.id,{method:'DELETE'});
     // KV listings can be briefly stale after a write. Once the DELETE API
     // confirms success, update the tree in memory instead of fetching it again.
-    recordConfirmedFolderWrite('delete',folder);
+    if(state.folderBackend!=='d1')recordConfirmedFolderWrite('delete',folder);
     state.folders=state.folders.filter(f=>f.id!==folder.id);
     state.expandedFolders.delete(folder.id);
     if(state.folderSelection===folder.id){
