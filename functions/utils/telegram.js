@@ -75,7 +75,7 @@ export async function sendToTelegram(formData, apiEndpoint, env, retryCount = 0)
       error: formatTelegramError(apiEndpoint, response, responseData),
     };
   } catch (error) {
-    console.error('Network error:', error);
+    console.error('Telegram network request failed');
     if (retryCount < MAX_RETRIES) {
       await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1)));
       return await sendToTelegram(formData, apiEndpoint, env, retryCount + 1);
@@ -116,10 +116,10 @@ export async function getTelegramFilePath(env, fileId) {
       return result.file_path;
     }
 
-    console.error('Error in response data:', responseData);
+    console.error('Telegram file lookup returned an error');
     return null;
   } catch (error) {
-    console.error('Error fetching file path:', error.message);
+    console.error('Telegram file lookup failed');
     return null;
   }
 }

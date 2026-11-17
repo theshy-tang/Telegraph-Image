@@ -67,33 +67,27 @@ function plainTextHeaders(reason) {
   };
 }
 
+export function uploadAuthMode(env){
+  return env.UPLOAD_AUTH_MODE || 'legacy';
+}
+export function uploadRequiresAuth(env){
+  return uploadAuthMode(env)!=='legacy'||!isEmptyBinding(env.UPLOAD_BASIC_USER)||!isEmptyBinding(env.UPLOAD_BASIC_PASS);
+}
 export function authenticateUploadRequest(request, env) {
-  const hasUser = !isEmptyBinding(env.UPLOAD_BASIC_USER);
-  const hasPass = !isEmptyBinding(env.UPLOAD_BASIC_PASS);
-
-  if (!hasUser && !hasPass) {
-    return null;
+  const mode=uploadAuthMode(env);
+  if(!['legacy','admin','dedicated'].includes(mode))return jsonResponse({error:'Invalid upload authentication mode'},{status:503});
+  const user=mode==='admin'?env.BASIC_USER:env.UPLOAD_BASIC_USER;
+  const pass=mode==='admin'?env.BASIC_PASS:env.UPLOAD_BASIC_PASS;
+  const hasUser=!isEmptyBinding(user),hasPass=!isEmptyBinding(pass);
+  if(mode==='legacy'&&!hasUser&&!hasPass)return null;
+  if(!hasUser||!hasPass){
+    return jsonResponse({error:mode==='admin'?'Admin credentials must be configured':'UPLOAD_BASIC_USER and UPLOAD_BASIC_PASS must both be configured to protect uploads'},{status:mode==='legacy'?500:503});
   }
-
-  if (!hasUser || !hasPass) {
-    return jsonResponse(
-      { error: 'UPLOAD_BASIC_USER and UPLOAD_BASIC_PASS must both be configured to protect uploads' },
-      { status: 500 }
-    );
-  }
-
-  if (!request.headers.has('Authorization')) {
-    return basicAuthChallengeResponse();
-  }
-
-  const credentials = basicAuthentication(request);
-  if (credentials instanceof Response) {
-    return credentials;
-  }
-
-  if (env.UPLOAD_BASIC_USER !== credentials.user || env.UPLOAD_BASIC_PASS !== credentials.pass) {
-    return unauthorizedResponse('Invalid upload credentials.');
-  }
-
+  const origin=request.headers.get('Origin');
+  if(origin&&origin!==new URL(request.url).origin)return jsonResponse({error:'Cross-origin uploads are forbidden'},{status:403});
+  if(!request.headers.has('Authorization'))return basicAuthChallengeResponse();
+  const credentials=basicAuthentication(request);
+  if(credentials instanceof Response)return credentials;
+  if(user!==credentials.user||pass!==credentials.pass)return unauthorizedResponse('Invalid upload credentials.');
   return null;
 }

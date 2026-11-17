@@ -29,3 +29,8 @@ This browser session did not exercise production, Telegram uploads, real multi-r
 ## Deployed Preview recovery checks
 
 After restoring the owner-authorized Preview credential and redeploying, real HTTP checks against Preview 2e6f11f5 passed: no credentials 401; intentionally wrong password 401; valid account list request 200, 9 records all carrying D1 metadata versions; single-media read 200. These were read-only checks, not a browser or production mutation test. No credential values were recorded here.
+
+
+## Local authenticated upload acceptance
+
+The local fixture server now also uses ephemeral Miniflare R2. Logged in with its fixture account, chose a 68-byte PNG through the file chooser and observed: successful uploads 1, failures 0, a newly visible media card, and both favorite/AI counts remaining 0. No remote Telegram calls or user media were used. Automated coverage also reads the stored R2 bytes and immediately edits the uploaded record through the D1 metadata API.

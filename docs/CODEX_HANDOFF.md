@@ -219,3 +219,15 @@ Codex 能回答以下问题才算完成接手：它知道当前分支/PR 与 Pro
 - Retried feature branch deployment 03d2e68; recovery Preview 2e6f11f5 deployed successfully with the metadata flag enabled.
 - Actual HTTP checks against that deployed Preview: unauthenticated 401; intentionally wrong password 401; correct account authentication 200; media count 9 with integer metadata versions; single-media details 200. Verification was read-only and did not modify existing media. The password was passed to the local verifier through non-echoing process input, not through a file or command-line argument.
 - The deployment blocker described above is resolved. Future password changes remain owner-controlled; do not reuse the historical broken Preview URLs as acceptance targets.
+
+
+## 2026-11-17 authenticated upload channel and release preparation
+
+- Studio now posts multipart uploads to /api/manage/upload with its admin Authorization header. The route independently revalidates admin auth, requires same-origin requests, checks bounded multipart bodies/media extensions and returns confirmed metadata for immediate display. Dedicated /upload credentials do not break the Studio login path.
+- Optional UPLOAD_AUTH_MODE=admin or dedicated protects /upload; an unset mode preserves legacy client behavior. Missing explicit-mode credentials and unknown modes fail closed. Protected-mode browser uploads reject foreign origins; native clients may omit Origin. No Production or Preview env var was changed to enable these modes in this batch.
+- Studio uses a default 50 MiB application policy (configurable via STUDIO_MAX_UPLOAD_BYTES up to 100 MiB), capped while streaming with 64 KiB multipart overhead. No assertion of provider limits/content verification. Empty files, malformed requests, SVG and unsupported extensions are rejected before storage writes.
+- Confirmed uploads stay in memory if immediate KV listing is stale; failed upload feedback survives refresh, duplicate upload starts are blocked, and new items stay unfiled/unfavorited/unpublished. Preview UI uploads remain disabled because the remote Preview intentionally has no Telegram credentials.
+- Removed obsolete telemetry callbacks from the uploader and raw exception logs from Telegram network/file lookup failures. New authenticated upload error responses do not disclose provider messages or references. Legacy client error compatibility is retained.
+- Added authenticated upload and frontend regressions plus real local Miniflare R2/D1 upload-to-edit checks. Local browser uploaded a 68-byte fixture PNG and observed one successful upload and its new card; remote Telegram credentials/data were not used. See docs/PRODUCTION_READINESS.md for the approval-dependent production plan and rollback constraints.
+
+- Final verification for this batch: 176 tests passing, including 12 new upload/UI regressions. No environment variables, secrets, production bindings or production data were changed.

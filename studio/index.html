@@ -963,21 +963,30 @@ async function selectAllMatching(){
   $('status').textContent='已经选中 '+state.selected.size+' 项。'+(!state.complete?' 为限制请求，最多自动加载 100 页；还有记录未加载。':'');
 }
 async function upload(files){
-  if(!files||!files.length)return;
-  if(!confirm('上传 '+files.length+' 个文件到图床？图片不会自动收藏或发布给 AI。'))return;
-  let good=0,failed=0;
-  for(const file of files){
-    try{
-      const fd=new FormData();fd.append('file',file);
-      const response=await fetch('/upload',{method:'POST',body:fd,cache:'no-store'});
-      if(!response.ok)throw Error('上传失败 HTTP '+response.status);
-      const result=await response.json();if(!Array.isArray(result)||!result[0]?.src)throw Error('上传响应异常');
-      good++;
-    }catch(e){failed++;console.error('upload failed',file.name,e);}
-    $('status').textContent='上传进度 '+(good+failed)+' / '+files.length;
-  }
-  toast('上传成功 '+good+'，失败 '+failed);
+  if(state.busy||!files?.length||IS_PREVIEW)return;
+  if(!confirm('上传 '+files.length+' 个文件到图床？新素材不会自动收藏或发布给 AI。'))return;
+  state.busy=true;setBusyUI(true);$('uploadBtn').disabled=true;
+  let good=0,failed=0;const confirmed=[],errors=[];
+  try{
+    for(const file of files){
+      try{
+        const fd=new FormData();fd.append('file',file);
+        const response=await fetch('/api/manage/upload',{method:'POST',headers:authHeader(),body:fd,cache:'no-store'});
+        if(!response.ok){let body;try{body=await response.json();}catch{}throw Error(body?.error||'上传失败 HTTP '+response.status);}
+        const result=await response.json();if(!Array.isArray(result)||!result[0]?.src)throw Error('上传响应异常');
+        if(result[0].record&&isSafeId(result[0].record.name))confirmed.push(normalize(result[0].record));
+        good++;
+      }catch(error){failed++;errors.push(file.name+'：'+error.message);}
+      $('status').textContent='上传进度 '+(good+failed)+' / '+files.length;
+    }
+  }finally{state.busy=false;setBusyUI(false);$('uploadBtn').disabled=IS_PREVIEW;}
   await loadPage(true);
+  // A newly uploaded KV key may not be visible in list() yet. Keep only
+  // server-confirmed records in memory so the upload does not appear to vanish.
+  for(const item of confirmed){if(!state.seen.has(item.id)){state.seen.add(item.id);state.items.push(item);}}
+  render();renderFolders();
+  $('status').textContent='上传完成：成功 '+good+' 项，失败 '+failed+' 项。'+(good?'新素材位于未归类。':'')+errors.slice(0,3).join('；');
+  toast('上传成功 '+good+'，失败 '+failed);
 }
 $('loginForm').addEventListener('submit',async e=>{
   e.preventDefault();
