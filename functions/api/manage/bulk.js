@@ -1,3 +1,4 @@
+import {hasStudioD1,getStudioFolder,getStudioMediaFolders} from '../../utils/studio-d1.js';
 /**
  * Media Studio bulk metadata updates.
  * Mounted under /api/manage so it inherits the existing Basic Auth middleware.
@@ -106,12 +107,21 @@ export async function onRequestPost(context) {
     if(payload.folderId!==null && (typeof payload.folderId!=='string' || !/^[a-f0-9]{32}$/.test(payload.folderId)))
       return json({error:'Invalid folder ID'},400);
     if(payload.folderId!==null) {
-      const folder=await env.img_url.getWithMetadata('studio:folder:'+payload.folderId);
-      if(!folder?.metadata || folder.metadata.id!==payload.folderId)
-        return json({error:'Destination folder not found'},404);
+      if(hasStudioD1(env)){
+        if(!await getStudioFolder(env.MEDIA_STUDIO_DB,payload.folderId))
+          return json({error:'Destination folder not found'},404);
+      }else{
+        const folder=await env.img_url.getWithMetadata('studio:folder:'+payload.folderId);
+        if(!folder?.metadata || folder.metadata.id!==payload.folderId)
+          return json({error:'Destination folder not found'},404);
+      }
     }
   }
 
+  // Folder membership is authoritative in D1 when configured; never re-read
+  // stale KV folderId values as the result of unrelated metadata edits.
+  const d1=hasStudioD1(env);
+  const memberships=d1 ? await getStudioMediaFolders(env.MEDIA_STUDIO_DB,ids) : new Map();
   let position = 0;
   const results = new Array(ids.length);
   async function worker() {
@@ -125,14 +135,25 @@ export async function onRequestPost(context) {
           continue;
         }
         const updated = transform(current.metadata, payload);
-        await env.img_url.put(id, current.value == null ? '' : current.value, { metadata: updated });
+        if(d1 && payload.action==='move_folder'){
+          if(payload.folderId===null){
+            await env.MEDIA_STUDIO_DB.prepare('DELETE FROM studio_media_folders WHERE media_id = ?').bind(id).run();
+          }else{
+            await env.MEDIA_STUDIO_DB.prepare(
+              'INSERT INTO studio_media_folders (media_id, folder_id, updated_at) VALUES (?,?,?) ON CONFLICT(media_id) DO UPDATE SET folder_id=excluded.folder_id,updated_at=excluded.updated_at'
+            ).bind(id,payload.folderId,Date.now()).run();
+          }
+        }else{
+          // Other media properties stay in KV until their later migration.
+          await env.img_url.put(id, current.value == null ? '' : current.value, { metadata: updated });
+        }
         results[i] = { id, ok: true, metadata: {
           liked: updated.liked === true,
           aiPublished: updated.aiPublished === true,
           tags: safeStringList(updated.tags),
           albums: safeStringList(updated.albums),
           category: updated.category || '',
-          folderId: updated.folderId || null
+          folderId: d1 ? (payload.action==='move_folder' ? payload.folderId : (memberships.get(id)||null)) : (updated.folderId||null)
         } };
       } catch (error) {
         console.error('Media Studio bulk update failed:', id, error);
@@ -140,7 +161,7 @@ export async function onRequestPost(context) {
       }
     }
   }
-  await Promise.all(Array.from({ length: Math.min(5, ids.length) }, () => worker()));
+  await Promise.all(Array.from({ length: Math.min(d1 && payload.action==='move_folder'?1:5, ids.length) }, () => worker()));
   const success = results.filter(x => x && x.ok).length;
   return json({
     action: payload.action,
