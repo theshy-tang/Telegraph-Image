@@ -150,6 +150,44 @@ body.working button[data-action]{opacity:.6}
 
 .mobile-folder-select{display:none}
 @media(max-width:900px){.mobile-folder-select{display:block;width:100%;max-width:none}.folderbar .folder-context{display:none}}
+
+/* True explorer-style hierarchical folder tree */
+.folder-tree{max-height:46vh;overflow:auto;padding:3px 3px 10px;scrollbar-width:thin}
+.folder-tree-row{position:relative;min-width:0}
+.folder-tree-entry{display:flex;align-items:center;margin-left:calc(var(--folder-level,0) * 15px);min-height:36px;min-width:0}
+.folder-chevron,.folder-chevron-spacer{width:24px;min-width:24px;height:28px;display:grid;place-items:center;flex-shrink:0;color:#93a1b7;background:transparent;border:0;border-radius:7px;font-size:19px;line-height:1;padding:0}
+.folder-chevron:hover{color:#42679e;background:#e8effa}
+.folder-chevron:focus-visible{outline:2px solid #6686c2;outline-offset:0}
+.folder-chevron.expanded{color:#4c72a5}
+.folder-tree-entry .folder-node{min-width:0;flex:1;border-radius:9px;padding:7px 8px;min-height:36px;gap:7px}
+.folder-tree-entry .folder-node .folder-emoji{font-size:16px;width:20px;color:#7191bc}
+.folder-tree-entry .folder-node .folder-label{flex:1}
+.folder-children{margin-left:12px;border-left:1px solid #e8edf5;padding-left:3px}
+.folder-tree-row.selected>.folder-tree-entry>.folder-node{background:#e8effe;color:#365b97;box-shadow:inset 2px 0 #7b9bd2}
+.folder-breadcrumb{display:flex;align-items:center;flex-wrap:wrap;gap:4px;min-width:0}
+.crumb{border:0;background:transparent;color:#71839e;font-size:13px;font-weight:600;border-radius:8px;padding:6px 8px;max-width:170px;white-space:nowrap;text-overflow:ellipsis;overflow:hidden}
+.crumb:not(:disabled):hover{background:#eef3fc;color:#365b97}
+.crumb.current{color:#2d446b;font-weight:750;opacity:1;cursor:default}
+.crumb-separator{color:#bbc6d5;font-size:16px}
+.descendants-toggle{display:flex;align-items:center;gap:9px;cursor:pointer;color:#60718e;font-size:12px;font-weight:630;white-space:nowrap;padding:8px 10px;border-radius:12px;background:#f7f9fd;border:1px solid #e7edf7;user-select:none}
+.descendants-toggle:hover{background:#eff4fc}
+.descendants-toggle input{position:absolute;opacity:0;width:1px;height:1px}
+.switch-track{width:33px;height:19px;border-radius:12px;background:#c4cfe0;position:relative;flex-shrink:0;transition:background .18s}
+.switch-track:after{content:"";position:absolute;top:3px;left:3px;width:13px;height:13px;background:white;border-radius:50%;box-shadow:0 1px 4px #283c5d33;transition:transform .18s}
+.descendants-toggle input:checked+.switch-track{background:#5d7eb8}
+.descendants-toggle input:checked+.switch-track:after{transform:translateX(14px)}
+.descendants-toggle input:focus-visible+.switch-track{outline:3px solid #90acd9;outline-offset:2px}
+.child-folder-region{padding:0 0 18px;margin:0 0 21px;border-bottom:1px solid #edf1f6}
+.child-folder-heading{display:flex;align-items:center;gap:10px;color:#425777;font-size:13px;margin-bottom:11px}
+.child-folder-heading .muted{font-size:11px}
+.child-folder-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(162px,1fr));gap:10px}
+.child-folder-card{display:flex;align-items:center;gap:9px;text-align:left;min-width:0;min-height:50px;border:1px solid #e8edf6;background:#fafcff;color:#3d5578;border-radius:12px;padding:10px 12px}
+.child-folder-card:not(:disabled):hover{background:#f0f5fd;border-color:#cddbf1;transform:translateY(-1px)}
+.child-folder-icon{font-size:19px;color:#7f9ac3}
+.child-folder-name{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:12px;font-weight:670}
+.child-folder-arrow{color:#a3b3ca;font-size:20px}
+@media(max-width:900px){.folderbar .descendants-toggle{width:100%;justify-content:center}}
+
 </style>
 </head>
 <body>
@@ -189,7 +227,10 @@ body.working button[data-action]{opacity:.6}
 </div>
 <div id="folderbar" class="folderbar">
 <select id="folderMobile" class="mobile-folder-select" aria-label="选择相册"><option value="all">全部相册</option><option value="unfiled">未归类</option></select>
-<div class="folder-context"><span class="folder-path-icon">▤</span><span id="folderPath">所有媒体</span><span class="folder-path-hint"> · 选择左侧相册可查看子相册内容</span></div>
+<div class="folder-context"><span class="folder-path-icon">▤</span><nav id="folderPath" class="folder-breadcrumb" aria-label="相册路径"></nav></div>
+<label id="includeDescendantsWrap" class="descendants-toggle hidden" title="开启后一起显示所有下级子相册中的素材">
+  <input id="includeDescendants" type="checkbox"><span class="switch-track" aria-hidden="true"></span><span>包含子文件夹素材</span>
+</label>
 <div class="toolbar">
 <button id="newFolder" class="ghost">＋ 新建相册</button>
 <button id="editFolder" class="ghost" disabled>重命名 / 移动</button>
@@ -197,6 +238,7 @@ body.working button[data-action]{opacity:.6}
 </div>
 </div>
 <section class="panel">
+<div id="childFolders" class="child-folder-region hidden" aria-label="当前相册的子文件夹"></div>
 <div class="heading"><div><h2>素材资源管理</h2><div class="muted" id="resultCount" style="margin-top:5px">加载中...</div></div><button id="selectPage" class="ghost">✓ 全选当前结果</button></div>
 <div class="toolbar"><input id="search" class="search" placeholder="⌕ 搜索文件名、标签、相册..." aria-label="搜索素材"><select id="albumFilter" title="旧版标签式相册（兼容旧数据）"><option value="">旧版相册标签</option></select><select id="order"><option value="new">最新上传</option><option value="old">最早上传</option><option value="name">名称排序</option></select></div>
 <div class="filterbar"><div class="toolbar" id="chips"><button data-chip="all" class="chip on">全部</button><button data-chip="image" class="chip">图片</button><button data-chip="video" class="chip">视频</button><button data-chip="favorites" class="chip">收藏</button><button data-chip="published" class="chip">AI 已发布</button></div><span class="muted" id="selectedInfo">未选择</span></div>
@@ -236,7 +278,7 @@ body.working button[data-action]{opacity:.6}
 (() => {
 'use strict';
 const $ = id => document.getElementById(id);
-const state = { auth:null,items:[],seen:new Set(),selected:new Set(),cursor:null,complete:false,busy:false,chip:'all',view:'all',limit:100,tiles:new Map(),folders:[],folderSelection:'all',editingFolderId:null };
+const state = { auth:null,items:[],seen:new Set(),selected:new Set(),cursor:null,complete:false,busy:false,chip:'all',view:'all',limit:100,tiles:new Map(),folders:[],folderSelection:'all',editingFolderId:null,expandedFolders:new Set(),includeDescendants:false };
 const IMG = /\.(png|jpe?g|gif|webp|bmp|tiff?|ico|avif|apng)$/i;
 const VID = /\.(mp4|webm|mov|ogg|m4v|mkv|avi)$/i;
 const safeText = v => String(v ?? '');
@@ -275,7 +317,7 @@ async function loadPage(reset=false){
     }
     state.cursor=r.list_complete?null:(r.cursor||null);
     state.complete=Boolean(r.list_complete)||!state.cursor;
-    render();
+    render();renderFolders();
     $('status').textContent=state.complete?'已经读取全部记录。':'还有未加载的素材；如需跨页选择，请使用「选择全部匹配结果」。';
     return true;
   }catch(e){toast(e.message);$('status').textContent='加载失败：'+e.message;return false;}
@@ -293,9 +335,13 @@ function inSelectedFolder(media){
   const selected=state.folderSelection;
   if(selected==='all')return true;
   if(selected==='unfiled')return !media.folderId;
-  let current=media.folderId,depth=0;
-  while(current&&depth++<12){
+  if(media.folderId===selected)return true;
+  if(!state.includeDescendants)return false;
+  const visited=new Set();
+  let current=folderById(media.folderId)?.parentId||null;
+  while(current&&!visited.has(current)){
     if(current===selected)return true;
+    visited.add(current);
     current=folderById(current)?.parentId||null;
   }
   return false;
@@ -321,36 +367,123 @@ function isDescendant(id,ancestorId){
   }
   return false;
 }
+function folderChildren(parentId){
+  return state.folders.filter(f=>f.parentId===parentId).sort((a,b)=>a.name.localeCompare(b.name,'zh-CN'));
+}
+function expandAncestors(id){
+  const seen=new Set();let cursor=folderById(id)?.parentId||null;
+  while(cursor&&!seen.has(cursor)){
+    seen.add(cursor);state.expandedFolders.add(cursor);cursor=folderById(cursor)?.parentId||null;
+  }
+}
+function renderBreadcrumbs(){
+  const nav=$('folderPath');nav.replaceChildren();
+  const makeCrumb=(label,id,last=false)=>{
+    const el=elt('button','crumb'+(last?' current':''));
+    el.type='button';el.textContent=label;el.title=label;
+    if(last){el.disabled=true;el.setAttribute('aria-current','page');}
+    else el.addEventListener('click',()=>selectFolder(id));
+    nav.append(el);
+  };
+  if(state.folderSelection==='all'){makeCrumb('全部素材','all',true);return;}
+  makeCrumb('我的相册','all');
+  nav.append(elt('span','crumb-separator','›'));
+  if(state.folderSelection==='unfiled'){makeCrumb('未归类','unfiled',true);return;}
+  const ids=[],seen=new Set();let folder=folderById(state.folderSelection);
+  while(folder&&!seen.has(folder.id)){
+    ids.unshift(folder.id);seen.add(folder.id);folder=folderById(folder.parentId);
+  }
+  ids.forEach((id,i)=>{
+    if(i)nav.append(elt('span','crumb-separator','›'));
+    makeCrumb(folderById(id)?.name||'未知相册',id,i===ids.length-1);
+  });
+}
+function renderChildFolderCards(){
+  const box=$('childFolders');box.replaceChildren();
+  const current=folderById(state.folderSelection);
+  if(!current){box.classList.add('hidden');return;}
+  const children=folderChildren(current.id);
+  if(!children.length){box.classList.add('hidden');return;}
+  box.classList.remove('hidden');
+  const head=elt('div','child-folder-heading');
+  head.append(elt('strong','', '子文件夹'),elt('span','muted',children.length+' 个'));
+  const cards=elt('div','child-folder-grid');
+  for(const child of children){
+    const card=elt('button','child-folder-card');
+    card.type='button';card.title='进入 '+folderFullPath(child.id);
+    card.append(elt('span','child-folder-icon','▤'),elt('span','child-folder-name',child.name),elt('span','child-folder-arrow','›'));
+    card.addEventListener('click',()=>selectFolder(child.id));
+    cards.append(card);
+  }
+  box.append(head,cards);
+}
 function renderFolders(){
-  const tree=$('folderTree');tree.replaceChildren();
+  const tree=$('folderTree');
+  tree.replaceChildren();tree.setAttribute('role','tree');
   const mobile=$('folderMobile');
   mobile.replaceChildren(new Option('全部相册','all'),new Option('未归类','unfiled'));
   $('folderAll').classList.toggle('active',state.folderSelection==='all');
   $('folderUnfiled').classList.toggle('active',state.folderSelection==='unfiled');
   const visited=new Set();
-  const append=(parent,depth)=>{
-    for(const folder of state.folders.filter(f=>f.parentId===parent).sort((a,b)=>a.name.localeCompare(b.name,'zh-CN'))){
+  const append=(parentId,level,container)=>{
+    for(const folder of folderChildren(parentId)){
       if(visited.has(folder.id))continue;visited.add(folder.id);
-      const btn=elt('button','folder-node'+(state.folderSelection===folder.id?' active':''));btn.type='button';
-      btn.style.paddingLeft=(12+Math.min(depth,7)*13)+'px';btn.title=folderFullPath(folder.id);
-      btn.append(elt('span','folder-emoji',depth?'⌑':'▤'),elt('span','folder-label',folder.name));
-      const count=state.items.filter(x=>{let id=x.folderId,step=0;while(id&&step++<12){if(id===folder.id)return true;id=folderById(id)?.parentId||null;}return false;}).length;
-      if(count)btn.append(elt('span','folder-count',String(count)));
-      mobile.add(new Option('　'.repeat(depth)+'▤ '+folder.name,folder.id));
-      btn.addEventListener('click',()=>selectFolder(folder.id));
-      tree.append(btn);
-      if(depth<9)append(folder.id,depth+1);
+      const children=folderChildren(folder.id);
+      const hasChildren=children.length>0;
+      const expanded=state.expandedFolders.has(folder.id);
+      const row=elt('div','folder-tree-row'+(state.folderSelection===folder.id?' selected':''));
+      row.style.setProperty('--folder-level',String(level));
+      const node=elt('div','folder-tree-entry');
+      if(hasChildren){
+        const toggle=elt('button','folder-chevron'+(expanded?' expanded':''));
+        toggle.type='button';
+        toggle.textContent=expanded?'⌄':'›';
+        toggle.title=expanded?'折叠 '+folder.name:'展开 '+folder.name;
+        toggle.setAttribute('aria-label',toggle.title);
+        toggle.setAttribute('aria-expanded',String(expanded));
+        toggle.setAttribute('aria-controls','children-'+folder.id);
+        toggle.addEventListener('click',e=>{
+          e.stopPropagation();
+          if(state.expandedFolders.has(folder.id))state.expandedFolders.delete(folder.id);
+          else state.expandedFolders.add(folder.id);
+          renderFolders();
+        });
+        node.append(toggle);
+      }else node.append(elt('span','folder-chevron-spacer',''));
+      const button=elt('button','folder-node'+(state.folderSelection===folder.id?' active':''));
+      button.type='button';button.title=folderFullPath(folder.id);
+      button.setAttribute('role','treeitem');
+      button.setAttribute('aria-level',String(level+1));
+      button.setAttribute('aria-selected',String(state.folderSelection===folder.id));
+      button.append(elt('span','folder-emoji',expanded&&hasChildren?'▤':'▥'),elt('span','folder-label',folder.name));
+      const count=state.items.filter(x=>x.folderId===folder.id).length;
+      if(count)button.append(elt('span','folder-count',String(count)));
+      button.addEventListener('click',()=>selectFolder(folder.id));
+      node.append(button);row.append(node);
+      const childWrap=elt('div','folder-children'+(expanded?'':' hidden'));
+      childWrap.id='children-'+folder.id;
+      if(hasChildren)append(folder.id,level+1,childWrap);
+      if(hasChildren)row.append(childWrap);
+      container.append(row);
+      mobile.add(new Option('　'.repeat(level)+'▤ '+folder.name,folder.id));
     }
   };
-  append(null,0);
+  append(null,0,tree);
   if(!state.folders.length)tree.append(elt('p','folder-empty','还没有相册，点击 + 创建第一个'));
   mobile.value=state.folderSelection;
+  renderBreadcrumbs();
+  renderChildFolderCards();
+  const inFolder=Boolean(folderById(state.folderSelection));
+  $('includeDescendantsWrap').classList.toggle('hidden',!inFolder);
+  $('includeDescendants').checked=state.includeDescendants;
 }
 function selectFolder(id){
+  const changed=id!==state.folderSelection;
   state.folderSelection=id;
+  if(changed)state.includeDescendants=false;
+  if(folderById(id))expandAncestors(id);
   $('editFolder').disabled=!folderById(id);
   $('deleteFolder').disabled=!folderById(id);
-  $('folderPath').textContent=id==='all'?'全部素材':id==='unfiled'?'未归类素材':folderFullPath(id);
   $('pageTitle').textContent=id==='all'?({all:'全部素材',image:'图片',video:'视频',favorites:'我的收藏',published:'AI 已发布'})[state.chip]||'全部素材'
     :id==='unfiled'?'未归类':folderById(id)?.name||'我的相册';
   renderFolders();render();
@@ -359,7 +492,9 @@ async function loadFolders(){
   try{
     const r=await api('/api/manage/folders');
     state.folders=Array.isArray(r.folders)?r.folders:[];
-    if(!['all','unfiled'].includes(state.folderSelection)&&!folderById(state.folderSelection))state.folderSelection='all';
+    if(!['all','unfiled'].includes(state.folderSelection)&&!folderById(state.folderSelection)){state.folderSelection='all';state.includeDescendants=false;}
+    state.expandedFolders=new Set([...state.expandedFolders].filter(id=>folderById(id)));
+    if(folderById(state.folderSelection))expandAncestors(state.folderSelection);
     renderFolders();
     $('editFolder').disabled=!folderById(state.folderSelection);
     $('deleteFolder').disabled=!folderById(state.folderSelection);
@@ -512,7 +647,7 @@ function render(){
       if(!visible.has(id))state.tiles.delete(id);
     }
   }
-  updateSelectionUI();renderFolders();
+  updateSelectionUI();
 }
 function formatBytes(n){return n>=1048576?(n/1048576).toFixed(1)+' MB':n>=1024?(n/1024).toFixed(1)+' KB':n+' B';}
 function select(id,checked){checked?state.selected.add(id):state.selected.delete(id);updateSelectionUI();}
@@ -631,6 +766,7 @@ $('loginForm').addEventListener('submit',async e=>{
     state.auth=candidate;$('pass').value='';$('auth').classList.add('hidden');$('app').classList.remove('hidden');if(IS_PREVIEW){$('uploadBtn').disabled=true;$('uploadBtn').title='预览环境仅同步正式图片目录，不允许上传，避免测试数据和真实 Telegram 存储混用';}await loadFolders();await loadPage();
   }catch(err){$('loginError').textContent=err.message;}
 });
+$('includeDescendants').addEventListener('change',e=>{state.includeDescendants=e.target.checked;render();});
 $('folderMobile').addEventListener('change',e=>selectFolder(e.target.value));
 $('folderAll').addEventListener('click',()=>selectFolder('all'));
 $('folderUnfiled').addEventListener('click',()=>selectFolder('unfiled'));
