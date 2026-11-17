@@ -143,3 +143,14 @@
 Codex 能回答以下问题才算完成接手：它知道当前分支/PR 与 Production 的差别；能定位文件夹 API、批量归属 API、D1 migration；知道 `liked` 不等于 `aiPublished`；知道预览上传不通是因为没有 TG 凭据；知道生产上传权限风险；知道用户希望先让功能完善再统一优化视觉性能；能安全在 Preview 做更改并给出真实测试结果，而非口头承诺。
 
 **不要复制本聊天的密码、Token 或私有数据进入交接文件。** 所需配置应通过 Cloudflare Secrets/Bindings 和授权后读取，不能靠手工硬编码。
+
+
+## 2026-11-17 Codex first repair batch
+
+- Baseline: aa882ef on feature/media-studio-v1; confirmed Preview b3bf14d9, isolated KV/D1, production without D1. Read-only Preview check: 3 folders, 2 memberships, 9 media records, no FK violations. One legacy KV membership differs from D1; D1 remains authoritative.
+- Disabled external Sentry request telemetry (including remote sampling); no credentials, request headers, URLs or upload details are sent by the project middleware. Existing exports remain compatible.
+- Malformed Basic Base64 now returns 400; management errors no longer return exception stacks. Bulk D1 preflight failures return structured no-store 503.
+- Repaired D1 mock statement methods so the existing lifecycle test actually runs; added security regressions. npm test: 132 passing on Node 24.15.0. This is not a browser or real Cloudflare D1 lifecycle acceptance result.
+- Repaired missing platform entries in package-lock.json. Do not commit installed node_modules changes.
+- Still outstanding: database-level concurrent cycle/depth/sibling protection; KV metadata lost-update/stale reads; legacy media deletion leaving D1 memberships; authenticated Studio browser workflow; production upload protection and liked-based public catalog require separately approved production rollout.
+- No production data/config changes, Telegram deletions, PR merge, or media URL changes performed.

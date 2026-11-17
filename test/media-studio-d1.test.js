@@ -7,6 +7,9 @@ function mockD1(){
     folders,media,calls,
     prepare(sql){
       return {
+        all(){ return this.bind().all(); },
+        first(){ return this.bind().first(); },
+        run(){ return this.bind().run(); },
         bind(...args){
           return {
             async all(){

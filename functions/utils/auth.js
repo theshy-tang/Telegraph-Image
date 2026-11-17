@@ -11,7 +11,12 @@ export function basicAuthentication(request) {
     return badRequestResponse('Malformed authorization header.');
   }
 
-  const buffer = Uint8Array.from(atob(encoded), character => character.charCodeAt(0));
+  let buffer;
+  try {
+    buffer = Uint8Array.from(atob(encoded), character => character.charCodeAt(0));
+  } catch {
+    return badRequestResponse('Invalid authorization value.');
+  }
   const decoded = new TextDecoder().decode(buffer).normalize();
   const index = decoded.indexOf(':');
 

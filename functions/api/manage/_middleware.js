@@ -10,7 +10,7 @@ async function errorHandling(context) {
     try {
       return await context.next();
     } catch (err) {
-      return new Response(`${err.message}\n${err.stack}`, { status: 500 });
+      return new Response(JSON.stringify({error:'Management service temporarily unavailable'}), { status: 503, headers: {'Content-Type':'application/json', 'Cache-Control':'no-store'} });
     }
   }
 
