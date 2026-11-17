@@ -10,7 +10,7 @@ const ACTIONS = new Set([
   'publish', 'unpublish',
   'add_tags', 'remove_tags',
   'add_albums', 'remove_albums',
-  'set_category'
+  'set_category', 'move_folder'
 ]);
 
 function json(body, status = 200) {
@@ -52,6 +52,7 @@ function transform(metadata, payload) {
   if (action === 'add_albums') next.albums = [...new Set([...safeStringList(next.albums), ...payload.names])].slice(0, 30);
   if (action === 'remove_albums') next.albums = safeStringList(next.albums).filter(x => !payload.names.includes(x));
   if (action === 'set_category') next.category = payload.category;
+  if (action === 'move_folder') next.folderId = payload.folderId;
   next.mediaStudioUpdatedAt = Date.now();
   return next;
 }
@@ -101,6 +102,16 @@ export async function onRequestPost(context) {
     payload.category = value.trim();
   }
 
+  if(payload.action === 'move_folder') {
+    if(payload.folderId!==null && (typeof payload.folderId!=='string' || !/^[a-f0-9]{32}$/.test(payload.folderId)))
+      return json({error:'Invalid folder ID'},400);
+    if(payload.folderId!==null) {
+      const folder=await env.img_url.getWithMetadata('studio:folder:'+payload.folderId);
+      if(!folder?.metadata || folder.metadata.id!==payload.folderId)
+        return json({error:'Destination folder not found'},404);
+    }
+  }
+
   let position = 0;
   const results = new Array(ids.length);
   async function worker() {
@@ -120,7 +131,8 @@ export async function onRequestPost(context) {
           aiPublished: updated.aiPublished === true,
           tags: safeStringList(updated.tags),
           albums: safeStringList(updated.albums),
-          category: updated.category || ''
+          category: updated.category || '',
+          folderId: updated.folderId || null
         } };
       } catch (error) {
         console.error('Media Studio bulk update failed:', id, error);
