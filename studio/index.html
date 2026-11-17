@@ -772,26 +772,29 @@ async function runAction(action,override=null){
   const ids=[...state.selected];
   if(action==='publish'&&!confirm('将 '+ids.length+' 个媒体标记为 AI 已发布。符合图片格式的文件会出现在无需登录的公开目录里，确认继续？'))return;
   state.busy=true;setBusyUI(true);
-  let ok=0,fail=0;const failed=[];
+  let ok=0,fail=0;const pending=new Set(ids);
   try{
     for(let i=0;i<ids.length;i+=50){
       const chunk=ids.slice(i,i+50);
       $('status').textContent='正在批量处理 '+Math.min(i+chunk.length,ids.length)+' / '+ids.length+' ...';
       const r=await api('/api/manage/bulk',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,ids:chunk,...additional})});
-      ok+=r.success||0;fail+=r.failed||0;
-      for(const result of r.results||[]){
-        if(!result.ok){failed.push(result.id);continue;}
+      const results=new Map((r.results||[]).map(result=>[result.id,result]));
+      for(const id of chunk){
+        const result=results.get(id);
+        if(!result?.ok)continue;
+        pending.delete(id);ok++;
         const item=state.items.find(x=>x.id===result.id);if(!item)continue;
         item.liked=result.metadata.liked;item.published=result.metadata.aiPublished;
         item.tags=result.metadata.tags;item.albums=result.metadata.albums;item.category=result.metadata.category;item.folderId=result.metadata.folderId||null;
       }
       render();
     }
-    state.selected=new Set(failed);
+    fail=pending.size;
+    state.selected=new Set(pending);
     $('status').textContent='操作完成：成功 '+ok+' 项，失败 '+fail+' 项。'+(fail?'失败项目仍保持选中，可重试。':'');
     toast('操作完成：成功 '+ok+' 项，失败 '+fail+' 项');
-  }catch(e){toast('操作中断：'+e.message);$('status').textContent='部分请求可能已完成，请刷新检查后重试。';}
-  finally{state.busy=false;setBusyUI(false);render();renderFolders();}
+  }catch(e){toast('操作中断：'+e.message);$('status').textContent='已确认成功 '+ok+' 项；其余 '+pending.size+' 项保留选中，可重试。中断的请求可能已生效。';}
+  finally{state.selected=new Set(pending);state.busy=false;setBusyUI(false);render();renderFolders();}
 }
 async function selectAllMatching(){
   if(state.busy)return;

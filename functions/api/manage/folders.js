@@ -1,4 +1,4 @@
-import {hasStudioD1,listStudioFolders} from '../../utils/studio-d1.js';
+import {studioFolderConflict,hasStudioD1,listStudioFolders} from '../../utils/studio-d1.js';
 import {
   allFolders, folderResponse, folderReady, safeMutation, parseFolderBody,
   folderName, folderId, folderKey, siblingExists
@@ -45,6 +45,7 @@ export async function onRequestPost({request,env}) {
     }
     return folderResponse({folder},201);
   } catch(e) {
+    if(studioFolderConflict(e))return folderResponse({error:'Folder structure changed or name already exists; refresh and retry'},409);
     console.error('Create folder failed',e);
     return folderResponse({error:'Failed to create folder'},503);
   }

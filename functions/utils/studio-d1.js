@@ -33,3 +33,8 @@ export async function folderContainsMedia(db,id) {
 export async function folderContainsChild(db,id) {
   return Boolean(await db.prepare('SELECT 1 AS found FROM studio_folders WHERE parent_id = ? LIMIT 1').bind(id).first());
 }
+
+// Only known integrity failures are conflicts; unavailable storage stays 503.
+export function studioFolderConflict(error) {
+  return /STUDIO_FOLDER_(?:DUPLICATE|LIMIT|STRUCTURE)|FOREIGN KEY constraint failed/.test(String(error?.message || ''));
+}

@@ -1,4 +1,4 @@
-import {hasStudioD1,listStudioFolders,getStudioFolder} from '../../../utils/studio-d1.js';
+import {studioFolderConflict,hasStudioD1,listStudioFolders,getStudioFolder} from '../../../utils/studio-d1.js';
 import {
   allFolders, folderResponse, folderReady, safeMutation, parseFolderBody,
   folderName, folderId, folderKey, siblingExists, createsCycle,
@@ -45,7 +45,7 @@ export async function onRequestPatch({request,env,params}) {
       await env.img_url.put(folderKey(id),persisted.value??'1',{metadata:{...persisted.metadata,...updated}});
     }
     return folderResponse({folder:updated});
-  }catch(e){console.error('Update folder failed',e);return folderResponse({error:'Failed to update folder'},503);}
+  }catch(e){if(studioFolderConflict(e))return folderResponse({error:'Folder structure changed or name already exists; refresh and retry'},409);console.error('Update folder failed',e);return folderResponse({error:'Failed to update folder'},503);}
 }
 
 export async function onRequestDelete({request,env,params}) {

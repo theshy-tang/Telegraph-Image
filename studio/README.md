@@ -72,3 +72,10 @@
 - 拖拽整理与跨相册复制（当前提供批量移动，尚无拖拽）
 - 文件大小/日期高级筛选、批量撤回或操作历史
 - 大规模图片缩略图优化和视频封面
+
+
+## Reliability update (2026-11-17)
+
+- D1 migration `0002_media_studio_folder_guards.sql` protects directory structure at write time, including concurrent moves. It is currently applied only to the isolated Preview database.
+- Batch completion keeps only unsuccessful/unconfirmed items selected. On interruption, completed successes are excluded from the retry selection; failed and unsent items remain selected. A timed-out request may already have succeeded; repeat the same action to retry safely.
+- Run `npm test` for unit and local Miniflare D1 SQL integration tests. This does not replace authenticated browser acceptance.

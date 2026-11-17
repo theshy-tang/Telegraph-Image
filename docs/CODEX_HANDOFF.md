@@ -162,3 +162,12 @@ Codex 能回答以下问题才算完成接手：它知道当前分支/PR 与 Pro
 - Construct the payload using the original UI action before translating to the API action. Backend validation stays strict; missing folderId remains invalid.
 - Added toolbar request regressions covering unfile, move to a selected folder, and opening the destination dialog. The unfile test failed before the fix, while the other two passed. After the fix the full suite has 135 passing tests.
 - Existing D1 lifecycle test covers null membership deletion and verifies the original KV media survives. No existing Preview/production records or original media URLs were modified for this fix.
+
+
+## 2026-11-17 folder integrity and batch retry reliability
+
+- Added migration 0002 with SQLite triggers for INSERT/UPDATE. Atomic database checks reject cycles, depth beyond 8, more than 1000 folders, and duplicate sibling names (SQLite NOCASE; existing application locale-aware checks still apply). Known constraint failures return API 409, storage outages remain 503.
+- Applied 0002 only to media-studio-preview after checking existing hierarchy and duplicate names. Preview smoke test rejected a cyclic update and duplicate root; confirmed the original parent did not change. Only newly generated Codex test records were created/cleaned; user rows and Production were untouched.
+- Added Miniflare as an explicit pinned dev dependency and real SQL tests covering constraints, stale-read inverse moves, API lifecycle, nonempty delete protection and preserved KV media metadata. Full suite: 141 passing locally.
+- Bulk operations now remove only confirmed successes from retry selection. Failed, absent-result, interrupted and unsent IDs remain selected, including failures spanning multiple 50-item batches. Responses lost in transit are uncertain and safe to retry because operations set state.
+- Remaining: Unicode sibling equality at the database layer is narrower than the application locale comparison; KV metadata lost updates; legacy deletion membership cleanup; authenticated browser E2E; production upload/catalog rollout. No production migration or merge authorized/performed.
