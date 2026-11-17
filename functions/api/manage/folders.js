@@ -7,7 +7,7 @@ import {
 export async function onRequestGet({env}) {
   if(!folderReady(env))return folderResponse({error:'Admin credentials and img_url KV required'},503);
   try {
-    return folderResponse({folders:hasStudioD1(env)?await listStudioFolders(env.MEDIA_STUDIO_DB):await allFolders(env.img_url)});
+    return folderResponse({backend:hasStudioD1(env)?'d1':'kv',folders:hasStudioD1(env)?await listStudioFolders(env.MEDIA_STUDIO_DB):await allFolders(env.img_url)});
   }catch(e){
     console.error('Folder list failed',e);
     return folderResponse({error:'Cannot list folders'},503);
