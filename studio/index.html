@@ -148,6 +148,8 @@ body.working button[data-action]{opacity:.6}
 .folder-dialog-actions button{min-width:105px}
 @media(max-width:900px){.folder-section-head,.folder-tree,#folderAll,#folderUnfiled{display:none}.folderbar{padding:12px}.folder-path-hint{display:none}}
 
+.mobile-folder-select{display:none}
+@media(max-width:900px){.mobile-folder-select{display:block;width:100%;max-width:none}.folderbar .folder-context{display:none}}
 </style>
 </head>
 <body>
@@ -186,6 +188,7 @@ body.working button[data-action]{opacity:.6}
 <div class="stat"><span class="muted">已发布给 AI</span><strong id="statAI">0</strong><small>公开目录中的已加载素材</small></div>
 </div>
 <div id="folderbar" class="folderbar">
+<select id="folderMobile" class="mobile-folder-select" aria-label="选择相册"><option value="all">全部相册</option><option value="unfiled">未归类</option></select>
 <div class="folder-context"><span class="folder-path-icon">▤</span><span id="folderPath">所有媒体</span><span class="folder-path-hint"> · 选择左侧相册可查看子相册内容</span></div>
 <div class="toolbar">
 <button id="newFolder" class="ghost">＋ 新建相册</button>
@@ -320,6 +323,8 @@ function isDescendant(id,ancestorId){
 }
 function renderFolders(){
   const tree=$('folderTree');tree.replaceChildren();
+  const mobile=$('folderMobile');
+  mobile.replaceChildren(new Option('全部相册','all'),new Option('未归类','unfiled'));
   $('folderAll').classList.toggle('active',state.folderSelection==='all');
   $('folderUnfiled').classList.toggle('active',state.folderSelection==='unfiled');
   const visited=new Set();
@@ -331,6 +336,7 @@ function renderFolders(){
       btn.append(elt('span','folder-emoji',depth?'⌑':'▤'),elt('span','folder-label',folder.name));
       const count=state.items.filter(x=>{let id=x.folderId,step=0;while(id&&step++<12){if(id===folder.id)return true;id=folderById(id)?.parentId||null;}return false;}).length;
       if(count)btn.append(elt('span','folder-count',String(count)));
+      mobile.add(new Option('　'.repeat(depth)+'▤ '+folder.name,folder.id));
       btn.addEventListener('click',()=>selectFolder(folder.id));
       tree.append(btn);
       if(depth<9)append(folder.id,depth+1);
@@ -338,6 +344,7 @@ function renderFolders(){
   };
   append(null,0);
   if(!state.folders.length)tree.append(elt('p','folder-empty','还没有相册，点击 + 创建第一个'));
+  mobile.value=state.folderSelection;
 }
 function selectFolder(id){
   state.folderSelection=id;
@@ -624,6 +631,7 @@ $('loginForm').addEventListener('submit',async e=>{
     state.auth=candidate;$('pass').value='';$('auth').classList.add('hidden');$('app').classList.remove('hidden');if(IS_PREVIEW){$('uploadBtn').disabled=true;$('uploadBtn').title='预览环境仅同步正式图片目录，不允许上传，避免测试数据和真实 Telegram 存储混用';}await loadFolders();await loadPage();
   }catch(err){$('loginError').textContent=err.message;}
 });
+$('folderMobile').addEventListener('change',e=>selectFolder(e.target.value));
 $('folderAll').addEventListener('click',()=>selectFolder('all'));
 $('folderUnfiled').addEventListener('click',()=>selectFolder('unfiled'));
 $('folderCreateSidebar').addEventListener('click',()=>openFolderEditor());
