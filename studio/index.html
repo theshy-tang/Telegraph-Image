@@ -152,6 +152,7 @@ body.working button[data-action]{opacity:.6}
 @media(max-width:900px){.mobile-folder-select{display:block;width:100%;max-width:none}.folderbar .folder-context{display:none}}
 
 /* True explorer-style hierarchical folder tree */
+.folder-tree-entry{margin-left:0!important}
 .folder-tree{max-height:46vh;overflow:auto;padding:3px 3px 10px;scrollbar-width:thin}
 .folder-tree-row{position:relative;min-width:0}
 .folder-tree-entry{display:flex;align-items:center;margin-left:calc(var(--folder-level,0) * 15px);min-height:36px;min-width:0}
@@ -628,7 +629,7 @@ function render(){
   $('loadMore').classList.toggle('hidden',state.complete);
   $('selectAllMatched').classList.toggle('hidden',state.complete);
   if(!list.length){
-    grid.replaceChildren(elt('div','empty','没有匹配的素材。请调整搜索或筛选条件。'));
+    grid.replaceChildren(elt('div','empty',folderById(state.folderSelection)&&folderChildren(state.folderSelection).length&&!state.includeDescendants?'当前相册没有直接存放的素材。可以打开上面的子文件夹，或者开启「包含子文件夹素材」。':'没有匹配的素材。请调整搜索或筛选条件。'));
     updateSelectionUI();return;
   }
   const frag=document.createDocumentFragment();
