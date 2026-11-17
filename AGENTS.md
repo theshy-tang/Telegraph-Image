@@ -10,8 +10,8 @@ Continue building **Media Studio**, a personal + Shopify media asset manager on 
 
 - Do not modify or rebind the production `img_url` KV namespace, change the production Pages deployment configuration, delete Telegram content, rotate credentials, expose secrets, or replace image IDs/URLs without explicit approval.
 - Production URL: `https://my-image-bed.pages.dev`. Preview URL changes on each deployment; inspect the latest successful deployment on the feature branch. Never confuse a commit-specific preview with production.
-- Preview uses an **isolated** KV namespace and the separate D1 database `media-studio-preview`; production currently has **no D1 binding**. The preview copy does not include Telegram upload credentials. Upload is disabled in the preview UI by design.
-- Existing production `/upload` may be publicly accessible because upload-specific Basic Auth variables were previously removed. Treat this as an outstanding security issue; propose and test protection without breaking existing upload clients, then request authorization before production changes.
+- Preview uses an **isolated** KV namespace and the separate D1 database `media-studio-preview`; Production now has its own dedicated D1 binding. The preview copy does not include Telegram upload credentials. Upload is disabled in the preview UI by design.
+- Production `/upload` is protected with `UPLOAD_AUTH_MODE=admin`. Preserve this setting and use the existing Production admin login.
 - Do not commit, print, log, paste into prompts, or re-create Cloudflare/Telegram tokens, passwords, API keys, or any unredacted secrets. Keep runtime credentials in secure environment settings.
 - Existing media links `/file/<id>` are long-lived: preserve them through every migration. `liked` is personal favorite; `aiPublished` is the deliberate opt-in to public AI asset catalogs. NEVER make favorites public by default.
 - Preview media thumbnails are proxied via `functions/api/studio/media/[id].js` from the production public file URL. Avoid exposing new private content through this mechanism.
@@ -44,3 +44,8 @@ The owner communicates in Chinese and expects you to **make real, verifiable imp
 - Tests: `test/media-studio*.test.js`
 
 **First task:** Audit the deployed preview D1 migration end to end (especially create/delete across refreshes, folder/media membership consistency, and API error handling), document any remaining defects and fix them on the feature branch. The owner has experienced stale album creation/deletion when KV was used, so correctness comes before more cosmetic features.
+
+## Live Production status
+
+2026-11-17 owner-authorized Production release: https://my-image-bed.pages.dev/studio/ . Production pinned to release/media-studio-v1-20261117 at 3a45de3; feature/media-studio-v1 stays development, main and Draft PR #1 unmerged. Original Production KV 8a9b05daf9384496887d063292832345 retained; dedicated Production D1 28f78f0b-b3b4-4c0e-a5c7-d7382d93aa7d enabled. Nine records/favorites migrated, AI publication count zero. Upload mode admin; write pause removed. See docs/PRODUCTION_RELEASE_20261117.md.
+Preview remains isolated; never mix its data/bindings with Production. Do not revert to KV-only code after D1 edits.

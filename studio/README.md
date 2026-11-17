@@ -3,7 +3,9 @@
 新版后台位于 `/studio/`，和原 `admin.html` / `admin-imgtc.html` 并存。
 
 ## 部署方式
-当前处于草稿 PR，先检查 Cloudflare Pages 是否生成分支预览部署。**不要使用 GitHub 主分支的正式域名假定新版已经上线**。如有预览域名，在其后追加 `/studio/`。
+
+正式版已发布：**https://my-image-bed.pages.dev/studio/**，使用原正式后台账号登录。正式站固定发布版本，后续开发走独立 Preview，Draft PR 未合并。下方早期预览说明仅为历史参考。
+开发继续在草稿 PR 中进行；正式站使用独立固定发布分支。
 
 只有 PR 合并或手动发布到 Production 后，`https://my-image-bed.pages.dev/studio/` 才应成为正式访问路径。
 
@@ -26,9 +28,9 @@
 ## D1 数据库（Preview 已启用）
 
 预览环境使用独立的 Cloudflare D1 数据库 `media-studio-preview`（Pages Functions binding: `MEDIA_STUDIO_DB`）。
-**仅 Preview 绑定 D1，Production 尚未绑定，不得将测试 D1 用作正式数据库。**
+**Preview 与 Production 已分别使用独立 D1，不得混用。Production 数据库为 media-studio-production-20261117。**
 在配置了 D1 的环境中，相册列表/创建/更名/移动/删除及素材的文件夹归属以 D1 为唯一真值来源；
-`img_url` KV 继续保存图片文件记录、收藏、标签、AI 发布和原始链接信息。
+`img_url` KV 保留原文件记录与存储/审核信息；可编辑资料在已启用 D1 的环境以 D1 为准。
 缺少 D1 绑定的环境保留旧 KV 相册逻辑用于兼容，但这并不代表正式站点已完成迁移。
 
 - 版本化 D1 结构：`migrations/0001_media_studio_folders_d1.sql`
@@ -36,7 +38,7 @@
 - Preview 初次迁移已复制原有 2 个相册、2 条图片归属关系；没有删除任何 KV 图片
 - 使用 D1 主数据库进行写后查询，避免 KV 的最终一致性导致相册创建/删除后反复刷新
 - 前端将 D1 列表视为权威结果，不使用原有 KV 写后短期覆盖机制
-- 现阶段未将标签、收藏、AI 发布状态迁入 D1；这些功能仍保存于 KV
+- 最新正式版和 Preview 的标签、收藏及 AI 发布状态已分别迁入独立 D1。
 
 ## 数据规则
 - `liked`：个人收藏（**不自动公开到 AI 目录**）
@@ -197,3 +199,7 @@ Preview 下载通过固定的正式站公开文件路径取得内容，不复制
 ### 下载错误提示与 Preview 502 修复
 
 修复 Preview 下载链路使用 Workers 不支持的重定向模式导致的 502。现在手动检查响应状态并拒绝重定向，保持原始文件链接不变。新版本会显示原文件请求失败、重定向、受限或不可用等安全原因代码，便于定位；不会显示源服务器的敏感响应或跳转地址。请使用最新 Preview 重试，旧提交的链接仍运行旧代码。
+
+## 正式发布结果
+
+9 条生产原图记录和 9 项收藏已保留；公开 AI 发布为 0 项，需手动发布后列出。预览中的测试相册/资料继续独立保留。上传已启用管理员鉴权，匿名调用返回 401。原图 ID 和 /file/ 链接未改动。备份和回滚边界见 docs/PRODUCTION_RELEASE_20261117.md。

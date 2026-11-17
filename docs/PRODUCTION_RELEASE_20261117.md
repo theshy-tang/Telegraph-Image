@@ -27,4 +27,14 @@ Old commit-specific deployments cannot be retroactively given the new guard. Do 
 
 ## Runtime acceptance
 
-Not yet recorded in this preparatory commit. Deployment and migration results will be appended after actual verification. Production credentials are preserved; never include their values in this document or output.
+Actual deployment and migration verification are recorded below. Production credentials are preserved; never include their values in this document or output.
+
+## Executed cutover and verification
+
+- Release commit: 3a45de3b7599e254e85711c24343881609a76333. Production branch release/media-studio-v1-20261117; main and Draft PR not merged. Development remains feature/media-studio-v1.
+- Read-only stage: 9f1fb277-585c-402b-8b03-416fb05dfd91 succeeded. Actual canonical checks: config 200, read-only header 1, storage ready true, anonymous upload 503, management 401. Existing secrets were never present in PATCH bodies.
+- Frozen source matched the verified backup exactly: 9 values and metadata records. Imported 9 editable documents and 9 inventory rows; folders/memberships 0; liked 9; aiPublished 0; versions 0; FK violations 0; ready set last. No direct source KV writes by migration.
+- Final Production deployment: beaf8f25-1dee-4483-bb0a-89eff44583c2, success and canonical. Metadata-D1 true, UPLOAD_AUTH_MODE admin, cutover flag removed. API/config checks storage ready true, uploadRequiresAuth true, no read-only header. Studio and helper assets available; anonymous upload/management 401. Public curated catalog 200 with 0 published items as intended.
+- Final Cloudflare data audit: original source values preserved; 9 metadata rows, 9 inventory rows, liked 9, publication 0, no edits yet at verification, FK clean. Preview data/bindings remain separate.
+- No authenticated user mutation, real Telegram upload or deletion was performed for release verification. Full original-media readback was rejected by automatic review due to possible private-media export; no content readback is claimed as evidence. The safer HEAD-only link check timed out, so original-image HTTP/content health remains unverified in this release journal. Original IDs/values were verified, not image bytes.
+- Fixed release branch prevents later feature/documentation pushes from automatically changing Production. Keep D1 authoritative on rollback after edits. Backup namespace remains unbound to the site.

@@ -1,3 +1,9 @@
+# Current release status
+
+2026-11-17 owner-authorized Production release: https://my-image-bed.pages.dev/studio/ . Production pinned to release/media-studio-v1-20261117 at 3a45de3; feature/media-studio-v1 stays development, main and Draft PR #1 unmerged. Original Production KV 8a9b05daf9384496887d063292832345 retained; dedicated Production D1 28f78f0b-b3b4-4c0e-a5c7-d7382d93aa7d enabled. Nine records/favorites migrated, AI publication count zero. Upload mode admin; write pause removed. See docs/PRODUCTION_RELEASE_20261117.md.
+
+This rollout has been authorized and executed. The historical checklist below remains a runbook; see the dated release journal for actual results.
+
 # Production rollout preparation — not authorization to execute
 
 Production is still the main branch, its original img_url KV, and Telegram storage. No production D1 database or upload-auth configuration was created or changed in this work. Draft PR #1 must remain unmerged until the owner explicitly approves release.
@@ -33,3 +39,7 @@ Reverting the code or disabling the metadata flag is not sufficient after D1 wri
 ## Still outstanding
 
 Owner-approved production backup/migration/cutover, actual Telegram transfer verification, independent rate limiting and content verification, full unattended browser CI, and production release approval. This document is a reviewable runbook, not a claim that these operations were performed.
+
+## Remaining operational work
+
+Independent rate limiting/content verification, unattended browser CI and an actual new Telegram upload smoke test remain future work. No existing Telegram files were deleted.
