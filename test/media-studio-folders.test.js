@@ -101,6 +101,24 @@ describe('Media Studio nested folders',function(){
     assert.strictEqual(kv.snapshot('studio:folder:'+root.id),undefined);
     assert.strictEqual(kv.snapshot('portrait.jpg').metadata.fileName,'portrait.jpg');
   });
+  it('checks folder children and media concurrently before deleting',async function(){
+    const kv=createMockKV({});
+    const folder=await create(kv,'快速删除测试');
+    const originalList=kv.list.bind(kv);
+    let pending=0,overlapped=false;
+    kv.list=async options=>{
+      pending++;
+      if(pending>1)overlapped=true;
+      await Promise.resolve();
+      try{return await originalList(options);}
+      finally{pending--;}
+    };
+    const res=await folderDetail.onRequestDelete(makeContext({env:envFor(kv),params:{id:folder.id},
+      request:request('/api/manage/folders/'+folder.id,'DELETE')}));
+    assert.strictEqual(res.status,200);
+    assert.strictEqual(overlapped,true,'independent KV checks should run at the same time');
+    assert.strictEqual(kv.snapshot('studio:folder:'+folder.id),undefined);
+  });
   it('fails closed when admin credentials are unset or request is cross-origin',async function(){
     const kv=createMockKV({});
     const disabled=await collection.onRequestGet(makeContext({env:{img_url:kv}}));
