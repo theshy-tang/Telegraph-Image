@@ -48,4 +48,11 @@ describe('Media Studio editable details',function(){
   const h=detailHarness();h.session.name.value=h.item.name;h.session.category.value=h.item.category;h.session.tags=[...h.item.tags];
   assert.strictEqual(h.detailDirty(),false);h.session.addInput={value:'Not added yet'};assert.strictEqual(h.detailDirty(),true);
  });
+ it('submits the draft baseline version, even when displayed metadata advances',async()=>{
+  let sent;const h=detailHarness(async(url,options)=>{sent=JSON.parse(options.body);return {results:[{id:'sample.jpg',ok:false,error:'Conflict'}]};});
+  h.session.baseVersion=3;h.item.metadataVersion=5;
+  assert.strictEqual(await h.detailWrite('edit_details',{fileName:'Draft',category:'',tags:[]}),false);
+  assert.strictEqual(sent.metadataVersion,3);assert.strictEqual(h.session.name.value,'Draft name');
+ });
+
 });

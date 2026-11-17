@@ -1,0 +1,54 @@
+import {hasStudioD1} from './studio-d1.js';
+
+export function metadataD1Enabled(env){
+  if(env.MEDIA_STUDIO_METADATA_D1!=='true')return false;
+  if(!hasStudioD1(env))throw Error('Metadata D1 binding required');
+  return true;
+}
+export function editableMetadata(m,id){
+  return {fileName:typeof m.fileName==='string'?m.fileName:id,liked:m.liked===true,aiPublished:m.aiPublished===true,
+    tags:Array.isArray(m.tags)?m.tags.filter(x=>typeof x==='string'):[],
+    albums:Array.isArray(m.albums)?m.albums.filter(x=>typeof x==='string'):[],category:typeof m.category==='string'?m.category:''};
+}
+function conflict(code){const error=new Error(code);error.code=code;return error;}
+export async function seedStudioMetadata(db,id,base){
+  await db.prepare('INSERT OR IGNORE INTO studio_media_metadata (media_id,metadata,version,deleted,updated_at) VALUES (?,?,0,0,?)')
+    .bind(id,JSON.stringify(editableMetadata(base,id)),Date.now()).run();
+}
+export async function readStudioMetadata(db,id,base){
+  const row=await db.prepare('SELECT metadata,version,deleted FROM studio_media_metadata WHERE media_id=?').bind(id).first();
+  if(row?.deleted)throw conflict('MEDIA_DELETED');
+  return {...base,...(row?JSON.parse(row.metadata):editableMetadata(base,id)),metadataVersion:row?.version||0};
+}
+export async function overlayStudioMetadata(env,keys){
+  if(!metadataD1Enabled(env))return keys;
+  const rows=new Map();
+  for(let offset=0;offset<keys.length;offset+=100){
+    const ids=keys.slice(offset,offset+100).map(k=>k.name);
+    const result=await env.MEDIA_STUDIO_DB.prepare('SELECT media_id,metadata,version,deleted FROM studio_media_metadata WHERE media_id IN ('+ids.map(()=>'?').join(',')+')').bind(...ids).all();
+    for(const row of result.results||[])rows.set(row.media_id,row);
+  }
+  return keys.filter(k=>!rows.get(k.name)?.deleted).map(k=>{
+    const row=rows.get(k.name);
+    return {...k,metadata:{...(k.metadata||{}),...(row?JSON.parse(row.metadata):editableMetadata(k.metadata||{},k.name)),metadataVersion:row?.version||0}};
+  });
+}
+export async function mutateStudioMetadata(db,id,base,updater,expectedVersion){
+  await seedStudioMetadata(db,id,base);
+  for(let attempt=0;attempt<12;attempt++){
+    const current=await readStudioMetadata(db,id,base);
+    if(expectedVersion!==undefined&&expectedVersion!==current.metadataVersion)throw conflict('METADATA_CONFLICT');
+    const next=updater({...current});
+    const result=await db.prepare('UPDATE studio_media_metadata SET metadata=?,version=version+1,updated_at=? WHERE media_id=? AND version=? AND deleted=0')
+      .bind(JSON.stringify(editableMetadata(next,id)),Date.now(),id,current.metadataVersion).run();
+    if(result.meta?.changes===1)return {...next,metadataVersion:current.metadataVersion+1};
+  }
+  throw conflict('METADATA_CONFLICT');
+}
+export async function markStudioMediaDeleted(db,id,base){
+  await seedStudioMetadata(db,id,base);
+  await db.batch([
+    db.prepare('UPDATE studio_media_metadata SET deleted=1,version=version+1,updated_at=? WHERE media_id=?').bind(Date.now(),id),
+    db.prepare('DELETE FROM studio_media_folders WHERE media_id=?').bind(id)
+  ]);
+}

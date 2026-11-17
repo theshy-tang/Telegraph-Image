@@ -1,3 +1,4 @@
+import {metadataD1Enabled,readStudioMetadata,mutateStudioMetadata} from '../../utils/studio-metadata.js';
 import {hasStudioD1,getStudioFolder,getStudioMediaFolders} from '../../utils/studio-d1.js';
 /**
  * Media Studio bulk metadata updates.
@@ -135,7 +136,8 @@ export async function onRequestPost(context) {
 
     // Folder membership is authoritative in D1 when configured; never re-read
     // stale KV folderId values as the result of unrelated metadata edits.
-    const d1=hasStudioD1(env);
+    const d1=hasStudioD1(env),metadataD1=metadataD1Enabled(env);
+    if(metadataD1&&payload.action==='edit_details'&&(!Number.isInteger(payload.metadataVersion)||payload.metadataVersion<0))return json({error:'Reload media details before saving'},409);
     const memberships=d1 ? await getStudioMediaFolders(env.MEDIA_STUDIO_DB,ids) : new Map();
     let position = 0;
     const results = new Array(ids.length);
@@ -149,7 +151,11 @@ export async function onRequestPost(context) {
             results[i] = { id, ok: false, error: 'File metadata not found' };
             continue;
           }
-          const updated = transform(current.metadata, payload);
+          let updated;
+          if(metadataD1){
+            if(payload.action==='move_folder')updated=await readStudioMetadata(env.MEDIA_STUDIO_DB,id,current.metadata);
+            else updated=await mutateStudioMetadata(env.MEDIA_STUDIO_DB,id,current.metadata,m=>transform(m,payload),payload.action==='edit_details'?payload.metadataVersion:undefined);
+          }else updated=transform(current.metadata,payload);
           if(d1 && payload.action==='move_folder'){
             if(payload.folderId===null){
               await env.MEDIA_STUDIO_DB.prepare('DELETE FROM studio_media_folders WHERE media_id = ?').bind(id).run();
@@ -158,11 +164,12 @@ export async function onRequestPost(context) {
                 'INSERT INTO studio_media_folders (media_id, folder_id, updated_at) VALUES (?,?,?) ON CONFLICT(media_id) DO UPDATE SET folder_id=excluded.folder_id,updated_at=excluded.updated_at'
               ).bind(id,payload.folderId,Date.now()).run();
             }
-          }else{
-            // Other media properties stay in KV until their later migration.
+          }else if(!metadataD1){
+            // Backwards-compatible KV mode; D1 mode never dual-writes editable fields.
             await env.img_url.put(id, current.value == null ? '' : current.value, { metadata: updated });
           }
           results[i] = { id, ok: true, metadata: {
+            metadataVersion: updated.metadataVersion,
             fileName: updated.fileName || id,
           liked: updated.liked === true,
             aiPublished: updated.aiPublished === true,
@@ -173,7 +180,7 @@ export async function onRequestPost(context) {
           } };
         } catch (error) {
           console.error('Media Studio bulk update failed:', id, error);
-          results[i] = { id, ok: false, error: error.code==='TAG_LIMIT'?'Tag limit reached (30 per file)':'Update failed' };
+          results[i] = { id, ok: false, code:error?.code||'UPDATE_FAILED', error:error?.code==='METADATA_CONFLICT'?'资料已在其他窗口更新，请重新载入后再保存':error?.code==='MEDIA_DELETED'?'素材记录已删除':error?.code==='TAG_LIMIT'?'Tag limit reached (30 per file)':'Update failed' };
         }
       }
     }

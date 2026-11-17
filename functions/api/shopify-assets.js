@@ -1,3 +1,4 @@
+import {overlayStudioMetadata} from '../utils/studio-metadata.js';
 /**
  * Telegraph-Image / Shopify AI asset catalog
  * Install at: functions/api/shopify-assets.js
@@ -48,6 +49,7 @@ export async function onRequest(context) {
   let listing;
   try {
     listing = await env.img_url.list({ limit, ...(cursor ? { cursor } : {}) });
+    listing={...listing,keys:await overlayStudioMetadata(env,listing.keys||[])};
   } catch (e) {
     console.error('Shopify catalog KV list error:', e);
     return respond({ error: 'Catalog temporarily unavailable' }, 503);

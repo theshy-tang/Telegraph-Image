@@ -19,8 +19,8 @@ async function errorHandling(context) {
         return dashboardDisabledResponse();
     }
 
-    if (isEmptyBinding(context.env.BASIC_USER)) {
-        return context.next();
+    if (isEmptyBinding(context.env.BASIC_USER) || isEmptyBinding(context.env.BASIC_PASS)) {
+        return new Response(JSON.stringify({error:'Admin credentials must be configured'}),{status:503,headers:{'Content-Type':'application/json','Cache-Control':'no-store'}});
     }
 
     if (!context.request.headers.has('Authorization')) {

@@ -1,3 +1,4 @@
+import {metadataD1Enabled,readStudioMetadata} from './studio-metadata.js';
 export const LIST_TYPE = {
   NONE: 'None',
   WHITE: 'White',
@@ -36,7 +37,11 @@ export function normalizeMetadata(metadata, id) {
 
 export async function getMetadata(env, id) {
   const record = await env.img_url.getWithMetadata(id);
-  return record?.metadata || null;
+  if(!record?.metadata)return null;
+  if(metadataD1Enabled(env)){
+    try{return await readStudioMetadata(env.MEDIA_STUDIO_DB,id,record.metadata);}catch(error){if(error.code==='MEDIA_DELETED')return null;throw error;}
+  }
+  return record.metadata;
 }
 
 export async function getOrCreateMetadata(env, id) {
