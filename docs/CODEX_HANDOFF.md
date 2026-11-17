@@ -202,7 +202,7 @@ Codex 能回答以下问题才算完成接手：它知道当前分支/PR 与 Pro
 - Use only the newest Preview for edits after migration. Old commit-specific Preview URLs run older code and can still write stale KV. Disabling the metadata flag is NOT a safe rollback once D1 edits exist: preserve/export D1 edits first or retain the D1 adapter when reverting UI changes. Do not copy this database to Production.
 
 
-### Preview deployment blocker — credential incident
+### Preview credential incident — resolved
 
 - Code commit 08cf0ef and migration 0003 are present. The e46f23b7 Preview builds successfully, but unauthenticated /api/manage/list returns 503 with Admin credentials must be configured. Do not describe this deployment as ready for user acceptance.
 - Cause: while adding the metadata feature flag, the assistant copied the GET project's entire Preview env_vars map into PATCH. Cloudflare represents secret_text values as empty strings when reading; re-sending BASIC_PASS with that placeholder overwrote the runtime secret. Comparing masked API values before/after was not a valid preservation check.
@@ -210,3 +210,12 @@ Codex 能回答以下问题才算完成接手：它知道当前分支/PR 与 Pro
 - Recovery requires the owner to re-enter the ORIGINAL Preview BASIC_PASS using Cloudflare Pages project my-image-bed > Settings > Variables and Secrets > Preview. Never ask for the password in chat, copy Production secrets, weaken auth, or silently set a replacement password.
 - After owner recovery: re-read current isolated Preview KV metadata; refresh only D1 version=0/deleted=0 snapshots if legacy Preview edits happened during the outage, preserving any versioned edits; redeploy feature/media-studio-v1; verify unauthenticated management returns 401 and complete authenticated Preview acceptance.
 - Future environment changes must never resend masked secret_text values. Do not repeat the faulty full-map PATCH approach. A successful build or identical masked API output does not prove valid runtime credentials.
+
+
+### Preview recovery verified
+
+- The owner explicitly authorized restoring Preview BASIC_PASS through the connected Cloudflare API. Only the owner-provided secret was written; no masked secret values were reused, and no password value was written to source, documentation, verification output, or a file. Production was excluded from the PATCH.
+- Rechecked 9 current Preview KV metadata snapshots against D1. All matched; no KV writes or metadata refreshes were necessary, and no versioned rows were overwritten.
+- Retried feature branch deployment 03d2e68; recovery Preview 2e6f11f5 deployed successfully with the metadata flag enabled.
+- Actual HTTP checks against that deployed Preview: unauthenticated 401; intentionally wrong password 401; correct account authentication 200; media count 9 with integer metadata versions; single-media details 200. Verification was read-only and did not modify existing media. The password was passed to the local verifier through non-echoing process input, not through a file or command-line argument.
+- The deployment blocker described above is resolved. Future password changes remain owner-controlled; do not reuse the historical broken Preview URLs as acceptance targets.

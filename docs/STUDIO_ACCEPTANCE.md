@@ -24,3 +24,8 @@ Real D1 integration tests cover concurrent independent metadata edits, stale-ver
 ## Limits
 
 This browser session did not exercise production, Telegram uploads, real multi-region networking, media deletion via the UI, or automated browser test execution in CI. Browser checks were performed through the UI; npm test is the repeatable API/logic/SQL suite. A standalone automated Studio browser suite is still future work.
+
+
+## Deployed Preview recovery checks
+
+After restoring the owner-authorized Preview credential and redeploying, real HTTP checks against Preview 2e6f11f5 passed: no credentials 401; intentionally wrong password 401; valid account list request 200, 9 records all carrying D1 metadata versions; single-media read 200. These were read-only checks, not a browser or production mutation test. No credential values were recorded here.
