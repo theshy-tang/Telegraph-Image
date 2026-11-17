@@ -1039,7 +1039,7 @@ function preview(x){
     d.description=field('素材描述',elt('textarea'));d.description.value=x.description||'';d.description.maxLength=4000;d.description.rows=4;d.description.placeholder='描述画面、用途或选图要点，最多 4000 字';
     d.sourceUrl=field('来源链接',elt('input'));d.sourceUrl.type='url';d.sourceUrl.value=x.sourceUrl||'';d.sourceUrl.maxLength=2048;d.sourceUrl.placeholder='https://…，不保存带账号密码的链接';
     d.prompt=field('AI 提示词',elt('textarea'));d.prompt.value=x.prompt||'';d.prompt.maxLength=8000;d.prompt.rows=6;d.prompt.placeholder='记录原始提示词、模型参数等，最多 8000 字';
-    const copyPrompt=elt('button','ghost','复制提示词');copyPrompt.type='button';copyPrompt.addEventListener('click',async()=>{try{await navigator.clipboard.writeText(d.prompt.value);message.textContent='已复制提示词';}catch{message.textContent='复制失败，请检查剪贴板权限';}});fields.append(copyPrompt,elt('p','muted','以上资料仅供后台管理，不会随 AI 发布自动进入公开目录。保存和导出时保留原文，不调用 AI 服务。'));
+    const copyPrompt=elt('button','ghost','复制提示词');copyPrompt.type='button';copyPrompt.addEventListener('click',async()=>{try{await navigator.clipboard.writeText(d.prompt.value);message.textContent='已复制提示词';}catch{message.textContent='复制失败，请检查剪贴板权限';}});fields.append(copyPrompt,elt('p','muted','描述、来源与提示词仅供后台管理，不会随 AI 发布自动进入公开目录。保存和导出时保留原文，不调用 AI 服务。'));
   }
   fields.append(elt('div','detail-section-title','标签'));
   const chips=elt('div','detail-tags');fields.append(chips);
@@ -1182,7 +1182,7 @@ async function runAction(action,override=null){
         if(!result?.ok){if(result?.error)failureMessages.add(result.error.includes('30 per file')?'素材标签已达上限（每张最多 30 个）':String(result.error).slice(0,160));continue;}
         pending.delete(id);ok++;
         const item=state.items.find(x=>x.id===result.id);if(!item)continue;
-        item.metadataVersion=result.metadata.metadataVersion;item.liked=result.metadata.liked;item.published=result.metadata.aiPublished;
+        item.metadataVersion=result.metadata.metadataVersion;item.name=result.metadata.fileName||item.name;for(const k of ['description','sourceUrl','prompt'])if(typeof result.metadata[k]==='string')item[k]=result.metadata[k];item.liked=result.metadata.liked;item.published=result.metadata.aiPublished;
         item.tags=result.metadata.tags;item.albums=result.metadata.albums;item.category=result.metadata.category;item.folderId=result.metadata.folderId||null;
       }
       render();

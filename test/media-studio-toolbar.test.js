@@ -55,4 +55,8 @@ describe('Media Studio folder toolbar requests',function(){
     assert.deepStrictEqual([...r.state.selected],['sample.jpg']);
   });
 
+  it('synchronizes confirmed names and private fields alongside the returned version',async()=>{
+    const r=await run('clear_folder',undefined,{api(){return {results:[{id:'sample.jpg',ok:true,metadata:{metadataVersion:4,fileName:'Latest name',description:'Latest description',sourceUrl:'https://example.com/latest',prompt:'Latest prompt',folderId:null,tags:[],albums:[],category:''}}]};}});
+    const item=r.state.items[0];assert.strictEqual(item.metadataVersion,4);assert.strictEqual(item.name,'Latest name');assert.strictEqual(item.description,'Latest description');assert.strictEqual(item.sourceUrl,'https://example.com/latest');assert.strictEqual(item.prompt,'Latest prompt');
+  });
 });

@@ -74,7 +74,9 @@ The local fixture server now also uses ephemeral Miniflare R2. Logged in with it
 
 ## Private asset descriptions and prompts — 2026-11-17
 
-- Complete suite: 238 passing. Eleven new regressions exercise multiline preservation/limits/clearing, source URL validation and no credentials, D1-only writes, optional old payloads, unrelated/global-tag mutations, stale drafts, new-field search, public catalog privacy and authenticated exports.
+- Complete suite: 239 passing. Twelve new regressions exercise multiline preservation/limits/clearing, source URL validation and no credentials, D1-only writes, optional old payloads, unrelated/global-tag mutations, stale drafts, new-field search, public catalog privacy and authenticated exports.
 - Actual local browser edited a disposable R2 sample description, source URL and multiline prompt. Favoriting during the draft retained all input. Save persisted fields across reload/relogin; full-library keyword search found the prompt. A confirmed-response mapping bug found by browser was fixed and now has a regression; repeat save retained the displayed prompt.
 - Browser downloaded admin JSON; disk readback verified description, sourceUrl and prompt exactly. CSV now has 17 columns (3 appended private fields); prior 14-column acceptance above describes the earlier version.
 - Public catalog regression publishes a fixture and checks none of these fields or sentinel contents appear. No new AI calls/services. Local acceptance does not imply editing any real Preview/Production record.
+
+- Final review also synchronized toolbar results with the returned display name and private fields before accepting a newer metadata version. Regression prevents a subsequent inspector save from using old prompt text with a fresh version.
