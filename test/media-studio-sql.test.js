@@ -56,12 +56,15 @@ describe('Media Studio real D1 SQL integrity',function(){
     assert.strictEqual((await detail.onRequestPatch(makeContext({env,params:{id:folder.id},request:req('PATCH',{name:'Renamed'})}))).status,200);
     const move=folderId=>bulk(makeContext({env,request:req('POST',{action:'move_folder',ids:['sample.jpg'],folderId})}));
     assert.strictEqual((await (await move(folder.id)).json()).success,1);
+    const edited=await bulk(makeContext({env,request:req('POST',{action:'edit_details',ids:['sample.jpg'],fileName:'Editable name',category:'Shop',tags:['keep','new']})}));
+    const editResult=await edited.json();assert.strictEqual(editResult.success,1);assert.strictEqual(editResult.results[0].metadata.folderId,folder.id);
+    assert.strictEqual(env.img_url.snapshot('sample.jpg').metadata.liked,true);
     const del=()=>detail.onRequestDelete(makeContext({env,params:{id:folder.id},request:new Request('https://example.com/api/manage/folders/'+folder.id,{method:'DELETE',headers:{Origin:'https://example.com'}})}));
     assert.strictEqual((await del()).status,409);
     assert.strictEqual((await (await move(null)).json()).success,1);
     assert.strictEqual((await del()).status,200);
     assert.strictEqual((await db.prepare('SELECT COUNT(*) AS n FROM studio_folders').first()).n,0);
     assert.strictEqual(env.img_url.snapshot('sample.jpg').metadata.liked,true);
-    assert.strictEqual(env.img_url.operations.put.length,0);
+    assert.strictEqual(env.img_url.operations.put.length,1);
   });
 });

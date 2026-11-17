@@ -192,6 +192,7 @@ body.working button[data-action]{opacity:.6}
 .folderbar .ghost.deleting{color:#476a9f;background:#eaf0fb;border-color:#bed0ec;cursor:progress;min-width:132px}
 .folderbar .ghost.deleting:disabled{opacity:1}
 .tag-choices{display:flex;flex-wrap:wrap;gap:8px;max-height:240px;overflow:auto;padding:4px}.tag-choice{display:flex;align-items:center;gap:6px;border:1px solid #dfe5f1;border-radius:12px;padding:8px 10px;cursor:pointer}.tag-choice input{width:auto;margin:0}.tag-choice:has(input:checked){background:#edf2ff;border-color:#7899ea}
+#preview{width:95vw;max-width:min(1120px,95vw);max-height:92vh;overflow:auto}#preview .modalbody{grid-template-columns:minmax(0,1.4fr) minmax(300px,1fr);align-items:start}#preview .modalbody img,#preview .modalbody video{max-height:76vh}.detail-fields{border:0;margin:0;padding:0;min-width:0;display:flex;flex-direction:column;gap:12px}.detail-fields hr{border:0;border-top:1px solid #e8edf5;width:100%;margin:5px 0}.detail-meta{color:#8996ab;font-size:12px}.detail-label{display:flex;flex-direction:column;gap:5px;font-weight:600}.detail-label input,.detail-label select,.detail-add input{width:100%;box-sizing:border-box;min-width:0}.detail-section-title{font-weight:700;margin-top:8px}.detail-tags{display:flex;flex-wrap:wrap;gap:8px}.detail-tag{display:inline-flex;align-items:center;border:1px solid #dce5f4;background:#edf2fb;border-radius:9px;max-width:100%}.detail-tag button{border:0;background:transparent;padding:5px 7px;box-shadow:none;border-radius:7px;color:#425e8d;overflow-wrap:anywhere}.detail-tag input{width:145px;max-width:100%}.detail-add{display:flex;gap:8px}.detail-add button{white-space:nowrap}.detail-actions{display:flex;gap:8px;flex-wrap:wrap}@media(max-width:760px){#preview .modalbody{grid-template-columns:1fr}#preview .modalbody img,#preview .modalbody video{max-height:45vh}}
 </style>
 </head>
 <body>
@@ -289,7 +290,7 @@ body.working button[data-action]{opacity:.6}
 </div>
 <div class="folder-dialog-actions"><button type="button" class="ghost" id="tagCancel">取消</button><button type="submit" class="primary" id="tagSave">应用标签</button></div>
 </form></dialog>
-<dialog id="preview"><div class="modalhead"><strong>文件预览</strong><button class="close" id="closePreview">✕</button></div><div class="modalbody"><div id="previewMedia"></div><div class="modalinfo" id="previewInfo"></div></div></dialog>
+<dialog id="preview"><div class="modalhead"><strong>素材详情</strong><button class="close" id="closePreview">✕</button></div><div class="modalbody"><div id="previewMedia"></div><div class="modalinfo" id="previewInfo"></div></div></dialog>
 <div id="toast" class="toast" role="status"></div>
 <script>
 (() => {
@@ -752,17 +753,86 @@ function setChip(chip){
   if(state.folderSelection==='all')$('pageTitle').textContent=({all:'全部素材',image:'图片',video:'视频',favorites:'我的收藏',published:'AI 已发布'})[chip]||'全部素材';
   render();
 }
+let detailSession=null;
+function detailTagList(tags){
+  const clean=[...new Set(tags.map(x=>x.trim()).filter(Boolean))];
+  if(clean.length>30||clean.some(x=>x.length>48||/[\u0000-\u001f\u007f<>]/.test(x)))throw Error('最多 30 个标签，每个不超过 48 字，不能包含控制字符或尖括号。');
+  return clean;
+}
+function detailDirty(){
+  const d=detailSession;
+  return d&&(Boolean(d.addInput?.value.trim())||Boolean(d.editingInput&&d.editingInput.value!==d.editingTag)||d.name.value.trim()!==d.x.name||d.category.value.trim()!==d.x.category||JSON.stringify(d.tags)!==JSON.stringify(d.x.tags));
+}
+function closeDetails(){
+  if(detailSession?.busy){toast('正在保存，请稍候');return;}
+  if(detailDirty()&&!confirm('资料尚未保存，确定放弃修改并关闭？'))return;
+  $('preview').close();detailSession=null;
+}
+async function detailWrite(action,payload={}){
+  const d=detailSession;if(!d||d.busy)return false;
+  d.busy=true;d.fields.disabled=true;d.message.textContent='正在保存…';
+  try{
+    const response=await api('/api/manage/bulk',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,ids:[d.x.id],...payload})});
+    const result=response.results?.find(r=>r.id===d.x.id);
+    if(!result?.ok)throw Error(result?.error||'保存未确认，请重试');
+    const m=result.metadata;
+    Object.assign(d.x,{name:m.fileName||d.x.name,liked:m.liked,published:m.aiPublished,tags:m.tags,albums:m.albums,category:m.category,folderId:m.folderId||null});
+    render();renderFolders();d.message.textContent='已保存';return true;
+  }catch(error){d.message.textContent='保存失败：'+error.message;return false;}
+  finally{d.busy=false;d.fields.disabled=false;}
+}
 function preview(x){
   const zone=$('previewMedia');zone.replaceChildren();
-  if(x.type==='image'){const img=elt('img');img.src=fileUrl(x.id);img.alt=x.name;img.addEventListener('error',()=>{zone.replaceChildren(elt('div','broken','图片加载失败，请检查图床源文件是否仍可访问。'));});zone.append(img);}
-  else if(x.type==='video'){const v=elt('video');v.src=fileUrl(x.id);v.controls=true;v.autoplay=false;zone.append(v);}
-  else zone.append(elt('p','', '文件预览不可用'));
+  if(x.type==='image'){const img=elt('img');img.src=fileUrl(x.id);img.alt=x.name;img.addEventListener('error',()=>{zone.replaceChildren(elt('div','broken','图片加载失败，请检查原图链接。'));});zone.append(img);}
+  else if(x.type==='video'){const v=elt('video');v.src=fileUrl(x.id);v.controls=true;zone.append(v);}
+  else zone.append(elt('p','','暂不支持预览此文件'));
   const info=$('previewInfo');info.replaceChildren();
-  for(const [label,val] of [['文件名',x.name],['文件大小',formatBytes(x.bytes)],['类型',x.type],['收藏',x.liked?'是':'否'],['AI 发布',x.published?'已发布':'未发布'],['标签',x.tags.join('、')||'无'],['相册',x.albums.join('、')||'无'],['分类',x.category||'无'],['所在相册',folderFullPath(x.folderId)||'未归类']]){
-    const line=elt('div');line.append(elt('strong','',label+'：'),document.createTextNode(safeText(val)));info.append(line);
+  const fields=elt('fieldset','detail-fields'),message=elt('p','notice');message.setAttribute('role','status');
+  const d=detailSession={x,tags:[...x.tags],busy:false,fields,message};
+  const header=elt('div','detail-meta',x.type.toUpperCase()+' · '+formatBytes(x.bytes)+(x.date?' · '+new Date(x.date).toLocaleDateString():''));
+  fields.append(header);
+  if(x.albums.length)fields.append(elt('p','muted','旧版相册标签：'+x.albums.join('、')));
+  function field(title,input){const label=elt('label','detail-label',title);label.append(input);fields.append(label);return input;}
+  d.name=field('显示名称',elt('input'));d.name.value=x.name;d.name.maxLength=160;
+  d.category=field('分类',elt('input'));d.category.value=x.category;d.category.maxLength=48;d.category.placeholder='添加素材分类';
+  fields.append(elt('div','detail-section-title','标签'));
+  const chips=elt('div','detail-tags');fields.append(chips);
+  function drawTags(){
+    d.commitTagEdit=null;d.editingInput=null;
+    chips.replaceChildren();
+    if(!d.tags.length)chips.append(elt('span','muted','暂无标签，在下方添加'));
+    for(const tag of d.tags){
+      const chip=elt('span','detail-tag'),name=elt('button','',tag),remove=elt('button','','×'),find=elt('button','','⌕');
+      name.type=remove.type=find.type='button';name.title='点击修改此素材的标签';remove.setAttribute('aria-label','移除标签 '+tag);find.setAttribute('aria-label','按标签筛选 '+tag);
+      name.addEventListener('click',()=>{
+        const input=elt('input');input.value=tag;input.maxLength=48;input.setAttribute('aria-label','修改标签 '+tag);name.replaceWith(input);input.focus();input.select();
+        let done=false;d.editingInput=input;d.editingTag=tag;
+        const commit=()=>{if(done)return true;try{d.tags=detailTagList(d.tags.map(t=>t===tag?input.value:t));done=true;drawTags();return true;}catch(error){message.textContent=error.message;return false;}};d.commitTagEdit=commit;
+        input.addEventListener('blur',commit);input.addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();commit();}if(event.key==='Escape'){event.preventDefault();done=true;drawTags();}});
+      });
+      remove.addEventListener('click',()=>{d.tags=d.tags.filter(t=>t!==tag);drawTags();});
+      find.addEventListener('click',()=>{if(detailDirty()&&!confirm('按标签筛选会关闭详情并放弃未保存修改，继续？'))return;if(![...$('tagFilter').options].some(option=>option.value===tag))$('tagFilter').add(new Option(tag,tag));$('tagFilter').value=tag;$('preview').close();detailSession=null;render();});
+      chip.append(name,find,remove);chips.append(chip);
+    }
   }
-  const btn=elt('button','primary','复制真实链接');btn.addEventListener('click',async()=>{try{await navigator.clipboard.writeText(publicFileUrl(x.id));toast('已复制图片链接');}catch{toast('无法复制，请检查浏览器权限');}});
-  info.append(btn);$('preview').showModal();
+  drawTags();
+  const addRow=elt('div','detail-add'),addInput=elt('input'),add=elt('button','ghost','＋ 添加');add.type='button';addInput.placeholder='输入标签，或选择已有标签';addInput.setAttribute('aria-label','添加标签');addInput.setAttribute('list','detailTagSuggestions');
+  const suggestions=elt('datalist');suggestions.id='detailTagSuggestions';
+  for(const tag of collectTagChoices(state.items,state.selected,'add_tags')){const option=elt('option');option.value=tag.name;suggestions.append(option);}
+  d.addInput=addInput;
+  const addTags=()=>{try{d.tags=detailTagList([...d.tags,...parseTagNames(addInput.value)]);addInput.value='';message.textContent='标签已修改，点击保存资料生效';drawTags();}catch(error){message.textContent=error.message;}};
+  add.addEventListener('click',addTags);addInput.addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();addTags();}});
+  addRow.append(addInput,add,suggestions);fields.append(addRow,elt('p','muted','点击标签文字修改，× 移除，⌕ 按标签查找。修改后保存资料。'));
+  const save=elt('button','primary','保存资料');save.type='button';
+  save.addEventListener('click',async()=>{try{if(d.commitTagEdit&&!d.commitTagEdit())return;if(addInput.value.trim()){addTags();if(addInput.value.trim())return;}const tags=detailTagList(d.tags);if(await detailWrite('edit_details',{fileName:d.name.value,category:d.category.value,tags})){d.tags=[...d.x.tags];d.name.value=d.x.name;d.category.value=d.x.category;drawTags();}}catch(error){message.textContent=error.message;}});
+  fields.append(save,elt('hr'));
+  const folder=elt('select');folderOptions(folder,null,'未归类');folder.value=x.folderId||'';field('所属相册',folder);
+  const move=elt('button','ghost','应用相册');move.type='button';move.addEventListener('click',()=>detailWrite('move_folder',{folderId:folder.value||null}));fields.append(move);
+  const favorite=elt('button','ghost',x.liked?'取消收藏':'收藏素材');favorite.type='button';favorite.addEventListener('click',async()=>{if(await detailWrite(d.x.liked?'unfavorite':'favorite'))favorite.textContent=d.x.liked?'取消收藏':'收藏素材';});
+  const publish=elt('button','ghost',x.published?'撤销 AI 发布':'发布给 AI');publish.type='button';publish.addEventListener('click',async()=>{if(!d.x.published&&!confirm('确认将此图片发布到无需登录的公开 AI 素材目录？'))return;if(await detailWrite(d.x.published?'unpublish':'publish'))publish.textContent=d.x.published?'撤销 AI 发布':'发布给 AI';});
+  const actions=elt('div','detail-actions');actions.append(favorite,publish);fields.append(actions,elt('hr'));
+  const copy=elt('button','ghost','复制真实链接');copy.type='button';copy.addEventListener('click',async()=>{try{await navigator.clipboard.writeText(publicFileUrl(x.id));toast('已复制链接');}catch{message.textContent='复制失败，请检查浏览器权限';}});
+  fields.append(copy,elt('p','muted','仅修改素材资料，不更改原始文件和图片 URL。'));info.append(fields,message);$('preview').showModal();
 }
 const tagEditor={action:null,chosen:new Set()};
 function parseTagNames(raw){
@@ -959,7 +1029,8 @@ $('bulkbar').addEventListener('click',e=>{const b=e.target.closest('[data-action
 $('loadMore').addEventListener('click',()=>loadPage());
 $('selectAllMatched').addEventListener('click',selectAllMatching);
 $('clearFilter').addEventListener('click',()=>{$('search').value='';$('albumFilter').value='';$('tagFilter').value='';setChip('all');});
-$('closePreview').addEventListener('click',()=>$('preview').close());
+$('closePreview').addEventListener('click',closeDetails);
+$('preview').addEventListener('cancel',event=>{event.preventDefault();closeDetails();});
 $('uploadBtn').addEventListener('click',()=>$('fileInput').click());
 $('fileInput').addEventListener('change',e=>{upload([...e.target.files]);e.target.value='';});
 })();

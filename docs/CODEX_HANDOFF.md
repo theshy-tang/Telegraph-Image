@@ -180,3 +180,12 @@ Codex 能回答以下问题才算完成接手：它知道当前分支/PR 与 Pro
 - Preserves existing tags, folder membership, favorites and AI publication; no automatic publication. Backend now rejects an add that exceeds 30 tags per file instead of silently truncating new tags. Failure reason is visible and failed IDs remain selected.
 - Added regression tests for parsing/limits, add/remove payloads, mixed membership counts, exact filtering and metadata preservation on tag capacity failures. Full suite: 148 passing locally. UI/handler tests plus Miniflare integration; not authenticated browser acceptance.
 - Tags still use legacy KV metadata; concurrent KV lost updates remain unresolved. No production data/config changes or PR merge.
+
+
+## 2026-11-17 editable media details
+
+- Replaced read-only preview information with an editable inspector: display filename, category, removable/renameable tag chips, inline new tags with datalist suggestions, tag lookup, folder assignment, favorite and separately confirmed AI publication. Original link copying and legacy album labels remain available.
+- Names/categories/tags are drafts until Save details; closing/Escape warns about unsaved changes. Folder/favorite/publication actions save independently without discarding the details draft. Controls are locked during requests, duplicate saves are rejected, and failures retain the draft.
+- New single-item bulk action edit_details validates display filename (1-160 chars), category (0-48 chars) and tags (0-30, each 1-48). It updates only those metadata properties, preserving KV value, file ID/URL, moderation/provider/unknown fields and publication flags. D1 remains authoritative for membership in its response. Renaming a tag affects this media item only.
+- Added six inspector regressions, extended the real D1 lifecycle test to verify metadata edits preserve D1 membership. Full suite: 154 passing locally. Browser connection attempt timed out; authenticated UI acceptance is still outstanding.
+- KV metadata concurrency/eventual consistency remains an outstanding limitation. No Production writes/config changes, original file deletion, credential changes or PR merge.

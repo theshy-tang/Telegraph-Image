@@ -11,7 +11,7 @@ const ACTIONS = new Set([
   'publish', 'unpublish',
   'add_tags', 'remove_tags',
   'add_albums', 'remove_albums',
-  'set_category', 'move_folder'
+  'set_category', 'move_folder', 'edit_details'
 ]);
 
 function json(body, status = 200) {
@@ -25,8 +25,8 @@ function json(body, status = 200) {
   });
 }
 
-function cleanNames(value, maxLength) {
-  if (!Array.isArray(value) || value.length > 15) return null;
+function cleanNames(value, maxLength, maxCount = 15) {
+  if (!Array.isArray(value) || value.length > maxCount) return null;
   const names = value.map(x => typeof x === 'string' ? x.trim() : '');
   if (!names.every(x => x.length > 0 && x.length <= maxLength && !/[\u0000-\u001f\u007f<>]/.test(x))) return null;
   return [...new Set(names)];
@@ -39,6 +39,7 @@ function safeStringList(value) {
 function transform(metadata, payload) {
   const next = { ...metadata };
   const action = payload.action;
+  if(action==='edit_details'){next.fileName=payload.fileName;next.category=payload.category;next.tags=payload.tags;}
   if (action === 'favorite') next.liked = true;
   if (action === 'unfavorite') next.liked = false;
   if (action === 'publish') {
@@ -93,6 +94,15 @@ export async function onRequestPost(context) {
     return json({ error: 'Choose 1–50 valid file IDs' }, 400);
   }
 
+  if(payload.action==='edit_details'){
+    if(payload.ids.length!==1)return json({error:'Edit one media item at a time'},400);
+    const name=typeof payload.fileName==='string'?payload.fileName.trim():'';
+    const tags=cleanNames(payload.tags,48,30);
+    if(!name||name.length>160||/[\u0000-\u001f\u007f<>]/.test(name)||!tags ||
+      typeof payload.category!=='string'||payload.category.length>48||/[\u0000-\u001f\u007f<>]/.test(payload.category))
+      return json({error:'Invalid media details'},400);
+    payload.fileName=name;payload.tags=tags;payload.category=payload.category.trim();
+  }
   const ids = [...new Set(payload.ids)];
   if (payload.action.endsWith('_tags') || payload.action.endsWith('_albums')) {
     const names = cleanNames(payload.names, 48);
@@ -153,7 +163,8 @@ export async function onRequestPost(context) {
             await env.img_url.put(id, current.value == null ? '' : current.value, { metadata: updated });
           }
           results[i] = { id, ok: true, metadata: {
-            liked: updated.liked === true,
+            fileName: updated.fileName || id,
+          liked: updated.liked === true,
             aiPublished: updated.aiPublished === true,
             tags: safeStringList(updated.tags),
             albums: safeStringList(updated.albums),
