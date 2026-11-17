@@ -1,3 +1,4 @@
+import {catalogStatus} from '../../utils/studio-catalog.js';
 import {overlayStudioMetadata} from '../../utils/studio-metadata.js';
 import {hasStudioD1,getStudioMediaFolders} from '../../utils/studio-d1.js';
 import { jsonResponse } from "../../utils/http.js";
@@ -25,5 +26,6 @@ export async function onRequest(context) {
       key.metadata={...(key.metadata||{}),folderId:memberships.get(key.name)||null};
     }
   }
-  return jsonResponse({...value,keys},{headers:{'Cache-Control':'no-store'}});
+  const ready=Boolean((await catalogStatus(env))?.ready);
+  return jsonResponse({...value,keys,...(ready?{catalogReady:true}:{})},{headers:{'Cache-Control':'no-store'}});
 }

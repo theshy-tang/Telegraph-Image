@@ -193,6 +193,7 @@ body.working button[data-action]{opacity:.6}
 .folderbar .ghost.deleting:disabled{opacity:1}
 .tag-choices{display:flex;flex-wrap:wrap;gap:8px;max-height:240px;overflow:auto;padding:4px}.tag-choice{display:flex;align-items:center;gap:6px;border:1px solid #dfe5f1;border-radius:12px;padding:8px 10px;cursor:pointer}.tag-choice input{width:auto;margin:0}.tag-choice:has(input:checked){background:#edf2ff;border-color:#7899ea}
 #preview{width:95vw;max-width:min(1120px,95vw);max-height:92vh;overflow:auto}#preview .modalbody{grid-template-columns:minmax(0,1.4fr) minmax(300px,1fr);align-items:start}#preview .modalbody img,#preview .modalbody video{max-height:76vh}.detail-fields{border:0;margin:0;padding:0;min-width:0;display:flex;flex-direction:column;gap:12px}.detail-fields hr{border:0;border-top:1px solid #e8edf5;width:100%;margin:5px 0}.detail-meta{color:#8996ab;font-size:12px}.detail-label{display:flex;flex-direction:column;gap:5px;font-weight:600}.detail-label input,.detail-label select,.detail-add input{width:100%;box-sizing:border-box;min-width:0}.detail-section-title{font-weight:700;margin-top:8px}.detail-tags{display:flex;flex-wrap:wrap;gap:8px}.detail-tag{display:inline-flex;align-items:center;border:1px solid #dce5f4;background:#edf2fb;border-radius:9px;max-width:100%}.detail-tag button{border:0;background:transparent;padding:5px 7px;box-shadow:none;border-radius:7px;color:#425e8d;overflow-wrap:anywhere}.detail-tag input{width:145px;max-width:100%}.detail-add{display:flex;gap:8px}.detail-add button{white-space:nowrap}.detail-actions{display:flex;gap:8px;flex-wrap:wrap}@media(max-width:760px){#preview .modalbody{grid-template-columns:1fr}#preview .modalbody img,#preview .modalbody video{max-height:45vh}}
+.catalog-dialog{width:95vw;max-width:min(1050px,95vw);max-height:90vh;overflow:auto}.catalog-form{padding:10px 24px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.catalog-form label{display:flex;flex-direction:column;gap:5px;font-size:13px;font-weight:600}.catalog-form input,.catalog-form select{min-width:0;width:100%;box-sizing:border-box}.catalog-form .catalog-descendants{flex-direction:row;align-items:center}.catalog-descendants input{width:auto}.catalog-summary{padding:15px 24px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;color:#63748f;font-size:13px}.catalog-summary span{flex:1}.catalog-results{padding:0 24px 22px;display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:14px}.catalog-result{position:relative;border:1px solid #e3e9f3;border-radius:16px;overflow:hidden}.catalog-result>input{position:absolute;left:10px;top:10px;z-index:1;width:18px;height:18px;cursor:pointer}.catalog-preview{width:100%;height:100%;border:0;box-shadow:none;background:white;text-align:left;display:flex;flex-direction:column;gap:7px;padding:12px}.catalog-preview img{width:100%;height:125px;object-fit:cover;border-radius:9px}.catalog-preview strong{overflow-wrap:anywhere}.catalog-preview .muted{font-size:12px}@media(max-width:700px){.catalog-form{grid-template-columns:1fr 1fr}.catalog-results{grid-template-columns:1fr 1fr}}
 </style>
 </head>
 <body>
@@ -244,7 +245,7 @@ body.working button[data-action]{opacity:.6}
 </div>
 <section class="panel">
 <div id="childFolders" class="child-folder-region hidden" aria-label="当前相册的子文件夹"></div>
-<div class="heading"><div><h2>素材资源管理</h2><div class="muted" id="resultCount" style="margin-top:5px">加载中...</div></div><button id="selectPage" class="ghost">✓ 全选当前结果</button></div>
+<div class="heading"><div><h2>素材资源管理</h2><div class="muted" id="resultCount" style="margin-top:5px">加载中...</div></div><div class="toolbar"><button id="globalSearchOpen" type="button" class="ghost" disabled title="全库索引准备好后可用">⌕ 全库检索</button><button id="selectPage" class="ghost">✓ 全选当前结果</button></div></div>
 <div class="toolbar"><input id="search" class="search" placeholder="⌕ 搜索文件名、标签、相册..." aria-label="搜索素材"><select id="tagFilter" aria-label="按标签筛选"><option value="">全部标签</option></select><select id="albumFilter" title="旧版标签式相册（兼容旧数据）"><option value="">旧版相册标签</option></select><select id="order"><option value="new">最新上传</option><option value="old">最早上传</option><option value="name">名称排序</option></select></div>
 <div class="filterbar"><div class="toolbar" id="chips"><button data-chip="all" class="chip on">全部</button><button data-chip="image" class="chip">图片</button><button data-chip="video" class="chip">视频</button><button data-chip="favorites" class="chip">收藏</button><button data-chip="published" class="chip">AI 已发布</button></div><span class="muted" id="selectedInfo">未选择</span></div>
 <div id="bulkbar" class="bulkbar hidden"><span class="count" id="selectedCount">已选择 0 项</span><button data-action="favorite">♡ 收藏</button><button data-action="unfavorite">取消收藏</button><button data-action="add_tags">＋ 标签</button><button data-action="remove_tags">－ 标签</button><button data-action="move_folder">▤ 移入相册</button><button data-action="clear_folder">移出相册</button><button data-action="set_category">分类</button><button data-action="publish">✧ 发布 AI</button><button data-action="unpublish">撤销 AI 发布</button><button id="clearSelection">清除选择</button></div>
@@ -258,6 +259,22 @@ body.working button[data-action]{opacity:.6}
 </section>
 </main>
 </div>
+<dialog id="catalogDialog" class="catalog-dialog" aria-labelledby="catalogTitle">
+<div class="modalhead"><strong id="catalogTitle">全库检索</strong><button type="button" class="close" id="catalogClose" aria-label="关闭全库检索">×</button></div>
+<form id="catalogForm" class="catalog-form">
+<label for="catalogQuery">关键词<input id="catalogQuery" maxlength="256" placeholder="搜索全库文件名、标签、分类或旧版相册"></label>
+<label for="catalogTag">精确标签<input id="catalogTag" maxlength="48" list="catalogTagOptions" placeholder="全部标签"><datalist id="catalogTagOptions"></datalist></label>
+<label for="catalogAlbum">旧版相册标签<input id="catalogAlbum" maxlength="48" placeholder="不限"></label>
+<label for="catalogView">素材范围<select id="catalogView"><option value="all">全部素材</option><option value="image">图片</option><option value="video">视频</option><option value="other">其他文件</option><option value="favorites">收藏</option><option value="published">AI 已发布</option></select></label>
+<label for="catalogFolder">相册<select id="catalogFolder"></select></label>
+<label for="catalogOrder">排序<select id="catalogOrder"><option value="new">最新上传</option><option value="old">最早上传</option><option value="name">名称排序</option></select></label>
+<label class="catalog-descendants"><input id="catalogDescendants" type="checkbox">包含子文件夹素材</label>
+<button type="submit" class="primary">检索全库</button>
+</form>
+<div class="catalog-summary"><span id="catalogStatus" role="status">输入条件后检索</span><button type="button" id="catalogSelectPage" class="ghost">选择当前结果</button><button type="button" id="catalogUseSelection" class="ghost">用于批量操作</button></div>
+<div id="catalogResults" class="catalog-results" aria-label="全库检索结果"></div>
+<div class="folder-dialog-actions"><button type="button" id="catalogMore" class="ghost" disabled>载入更多结果</button></div>
+</dialog>
 <dialog id="folderEditor" class="folder-dialog">
 <form id="folderForm" class="folder-form">
 <div class="modalhead"><strong id="folderDialogTitle">新建相册</strong><button type="button" class="close" id="folderDialogClose">✕</button></div>
@@ -755,6 +772,54 @@ function setChip(chip){
   if(state.folderSelection==='all')$('pageTitle').textContent=({all:'全部素材',image:'图片',video:'视频',favorites:'我的收藏',published:'AI 已发布'})[chip]||'全部素材';
   render();
 }
+const catalogSearch={items:[],seen:new Set(),cursor:null,filters:null,total:0,busy:false,controller:null,requestId:0};
+function catalogFilters(){
+  return {q:$('catalogQuery').value.trim(),tag:$('catalogTag').value.trim(),view:$('catalogView').value,folder:$('catalogFolder').value,descendants:String($('catalogDescendants').checked),order:$('catalogOrder').value,album:$('catalogAlbum').value.trim()};
+}
+function closeCatalog(){
+  catalogSearch.controller?.abort();catalogSearch.requestId++;catalogSearch.busy=false;$('catalogDialog').close();render();renderFolders();
+}
+function renderCatalogResults(){
+  const zone=$('catalogResults');zone.replaceChildren();
+  for(const item of catalogSearch.items){
+    const card=elt('div','catalog-result'),check=elt('input');check.type='checkbox';check.checked=state.selected.has(item.id);check.setAttribute('aria-label','选择检索素材 '+item.name);
+    check.addEventListener('change',()=>{select(item.id,check.checked);$('catalogUseSelection').textContent='用于批量操作（已选 '+state.selected.size+' 项）';});
+    const open=elt('button','catalog-preview');open.type='button';open.setAttribute('aria-label','查看 '+item.name);
+    if(item.type==='image'){const img=elt('img');img.src=fileUrl(item.id);img.alt=item.name;img.loading='lazy';open.append(img);}else open.append(elt('span','fileicon',item.type==='video'?'▶':'▤'));
+    open.append(elt('strong','',item.name),elt('span','muted',formatBytes(item.bytes)+' · '+(folderFullPath(item.folderId)||'未归类')),elt('span','muted',item.tags.slice(0,5).join(' · ')));
+    open.addEventListener('click',()=>preview(item));card.append(check,open);zone.append(card);
+  }
+  if(!catalogSearch.items.length&&!catalogSearch.busy)zone.append(elt('p','muted','没有匹配的素材。'));
+  $('catalogUseSelection').textContent='用于批量操作（已选 '+state.selected.size+' 项）';
+}
+async function searchCatalog(reset=true){
+  if(catalogSearch.busy&&!reset)return false;
+  if(reset){catalogSearch.controller?.abort();catalogSearch.items=[];catalogSearch.seen.clear();catalogSearch.cursor=null;catalogSearch.filters=catalogFilters();}
+  const requestId=++catalogSearch.requestId,controller=new AbortController();catalogSearch.controller=controller;catalogSearch.busy=true;
+  $('catalogMore').disabled=true;$('catalogStatus').textContent='正在检索全库…';
+  try{
+    const params=new URLSearchParams({...catalogSearch.filters,limit:'50'});if(catalogSearch.cursor)params.set('cursor',catalogSearch.cursor);
+    const response=await api('/api/manage/search?'+params,{signal:controller.signal});
+    if(requestId!==catalogSearch.requestId)return false;
+    for(const record of response.keys||[]){
+      if(!isSafeId(record.name))continue;
+      let item=state.items.find(x=>x.id===record.name);
+      if(item){if((record.metadata?.metadataVersion||0)>=(item.metadataVersion||0))Object.assign(item,normalize(record));}else{item=normalize(record);state.items.push(item);state.seen.add(item.id);}
+      if(!catalogSearch.seen.has(item.id)){catalogSearch.seen.add(item.id);catalogSearch.items.push(item);}
+    }
+    catalogSearch.cursor=response.cursor||null;catalogSearch.total=response.total;
+    const suggestions=$('catalogTagOptions');suggestions.replaceChildren();for(const tag of response.tags||[]){const option=elt('option');option.value=tag;suggestions.append(option);}
+    $('catalogStatus').textContent='全库匹配 '+response.total+' 项，已显示 '+catalogSearch.items.length+' 项。点击结果可编辑详情。';
+    return true;
+  }catch(error){if(requestId===catalogSearch.requestId&&error.name!=='AbortError')$('catalogStatus').textContent='检索失败：'+error.message;return false;}
+  finally{if(requestId===catalogSearch.requestId){catalogSearch.busy=false;$('catalogMore').disabled=!catalogSearch.cursor;renderCatalogResults();}}
+}
+function openCatalog(){
+  if(state.busy)return;
+  $('catalogAlbum').value=$('albumFilter').value;$('catalogQuery').value=$('search').value;$('catalogTag').value=$('tagFilter').value;$('catalogView').value=state.chip;$('catalogOrder').value=$('order').value;
+  const folders=$('catalogFolder');folderOptions(folders,null,'未归类');folders.options[0].value='unfiled';folders.add(new Option('全部相册','all'),0);folders.value=state.folderSelection;
+  $('catalogDescendants').checked=state.includeDescendants;$('catalogDialog').showModal();searchCatalog(true);
+}
 let detailSession=null;
 function detailTagList(tags){
   const clean=[...new Set(tags.map(x=>x.trim()).filter(Boolean))];
@@ -780,7 +845,7 @@ async function detailWrite(action,payload={}){
     const m=result.metadata;
     if(action!=='edit_details'&&m.metadataVersion===d.x.metadataVersion+1&&d.baseVersion===d.x.metadataVersion)d.baseVersion=m.metadataVersion;
     Object.assign(d.x,{metadataVersion:m.metadataVersion,name:m.fileName||d.x.name,liked:m.liked,published:m.aiPublished,tags:m.tags,albums:m.albums,category:m.category,folderId:m.folderId||null});
-    render();renderFolders();d.message.textContent=detailDirty()?'此操作已保存；资料仍有未保存修改':'已保存';return true;
+    render();renderFolders();if(typeof renderCatalogResults==='function'){renderCatalogResults();if($('catalogDialog')?.open)$('catalogStatus').textContent='资料已更新，重新检索可刷新匹配结果和数量。';}d.message.textContent=detailDirty()?'此操作已保存；资料仍有未保存修改':'已保存';return true;
   }catch(error){d.message.textContent='保存失败：'+error.message;return false;}
   finally{d.busy=false;d.fields.disabled=false;}
 }
@@ -1008,9 +1073,17 @@ $('loginForm').addEventListener('submit',async e=>{
     try{json=JSON.parse(body);}
     catch{throw Error('后台返回的不是 JSON，请检查 Preview 的 KV 绑定和 Pages Functions。响应开头：'+body.slice(0,70));}
     if(!Array.isArray(json.keys))throw Error('图床后台返回的数据格式不正确，请检查 KV 配置。');
-    state.auth=candidate;$('pass').value='';$('auth').classList.add('hidden');$('app').classList.remove('hidden');if(IS_PREVIEW){$('uploadBtn').disabled=true;$('uploadBtn').title='预览环境仅同步正式图片目录，不允许上传，避免测试数据和真实 Telegram 存储混用';}await loadFolders();await loadPage();
+    $('globalSearchOpen').disabled=true;
+    state.auth=candidate;$('pass').value='';$('auth').classList.add('hidden');$('app').classList.remove('hidden');if(IS_PREVIEW){$('uploadBtn').disabled=true;$('uploadBtn').title='预览环境仅同步正式图片目录，不允许上传，避免测试数据和真实 Telegram 存储混用';}await loadFolders();await loadPage();$('globalSearchOpen').disabled=!json.catalogReady;$('globalSearchOpen').title=json.catalogReady?'按全库索引检索，不必先加载所有页面':'当前环境的全库索引尚未启用';
   }catch(err){$('loginError').textContent=err.message;}
 });
+$('globalSearchOpen').addEventListener('click',openCatalog);
+$('catalogClose').addEventListener('click',closeCatalog);
+$('catalogUseSelection').addEventListener('click',closeCatalog);
+$('catalogDialog').addEventListener('cancel',()=>{catalogSearch.controller?.abort();catalogSearch.requestId++;catalogSearch.busy=false;render();renderFolders();});
+$('catalogForm').addEventListener('submit',event=>{event.preventDefault();searchCatalog(true);});
+$('catalogMore').addEventListener('click',()=>searchCatalog(false));
+$('catalogSelectPage').addEventListener('click',()=>{const all=catalogSearch.items.length&&catalogSearch.items.every(x=>state.selected.has(x.id));for(const item of catalogSearch.items)all?state.selected.delete(item.id):state.selected.add(item.id);updateSelectionUI();renderCatalogResults();});
 $('includeDescendants').addEventListener('change',e=>{state.includeDescendants=e.target.checked;render();});
 $('folderMobile').addEventListener('change',e=>selectFolder(e.target.value));
 $('folderAll').addEventListener('click',()=>selectFolder('all'));

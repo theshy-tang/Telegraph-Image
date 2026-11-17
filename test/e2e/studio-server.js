@@ -5,6 +5,13 @@ const {createStudioDB}=require('../studio-runtime');const {createMockKV}=require
 (async()=>{
  const runtime=await createStudioDB();
  const env={BASIC_USER:'studio-test',BASIC_PASS:'local-test',MEDIA_STUDIO_DB:runtime.db,STORAGE_PROVIDER:'r2',img_r2:runtime.bucket,MEDIA_STUDIO_METADATA_D1:'true',SHOPIFY_AI_CATALOG_ENABLED:'true',img_url:createMockKV({'sample.jpg':{fileName:'Local sample.jpg',tags:['Fixture'],albums:[],liked:false,aiPublished:false,fileSize:100,TimeStamp:1700000000000}})};
+ const catalog=await import('../../functions/utils/studio-catalog.js');
+ // A fixture beyond the first 100 KV records makes unloaded-result acceptance reproducible.
+ for(let n=0;n<105;n++)await env.img_url.put('fixture'+String(n).padStart(3,'0')+'.jpg','',{metadata:{fileName:'Fixture '+n,tags:['Fixture'],albums:[],TimeStamp:1700000000000+n}});
+ await env.img_url.put('zzzzz_target.jpg','',{metadata:{fileName:'Unloaded target',tags:['Global-only'],albums:[],TimeStamp:1700000000200}});
+ for(const key of (await env.img_url.list({limit:1000})).keys)await catalog.indexStudioMedia(env,key.name,key.metadata);
+ await runtime.db.prepare('UPDATE studio_catalog_state SET ready=1 WHERE id=1').run();
+ const search=await import('../../functions/api/manage/search.js');
  const manage=await import('../../functions/api/manage/_middleware.js');
  const collection=await import('../../functions/api/manage/folders.js');const detail=await import('../../functions/api/manage/folders/[id].js');
  const upload=await import('../../functions/api/manage/upload.js');
@@ -17,7 +24,8 @@ const {createStudioDB}=require('../studio-runtime');const {createMockKV}=require
    const chunks=[];for await(const chunk of req)chunks.push(chunk);
    const request=new Request(url,{method:req.method,headers:req.headers,...(!['GET','HEAD'].includes(req.method)?{body:Buffer.concat(chunks)}:{})});
    const id=decodeURIComponent(url.pathname.split('/').pop());let handler;
-   if(url.pathname==='/api/manage/upload')handler=upload.onRequestPost;
+   if(url.pathname==='/api/manage/search')handler=search.onRequestGet;
+   else if(url.pathname==='/api/manage/upload')handler=upload.onRequestPost;
    else if(url.pathname==='/api/manage/list')handler=list.onRequest;
    else if(url.pathname==='/api/manage/bulk')handler=bulk.onRequestPost;
    else if(url.pathname==='/api/manage/folders')handler=req.method==='GET'?collection.onRequestGet:collection.onRequestPost;

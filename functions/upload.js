@@ -1,3 +1,4 @@
+import {indexStudioMedia} from './utils/studio-catalog.js';
 import {readStudioUpload,studioUploadLimit,StudioUploadError} from './utils/studio-upload.js';
 import {metadataD1Enabled} from './utils/studio-metadata.js';
 import { authenticateUploadRequest, uploadAuthMode } from "./utils/auth.js";
@@ -47,6 +48,7 @@ export async function performUpload(context, options={}) {
 
             if(shortId)metadata.shortId=shortId;
             await putMetadata(env,longId,metadata);
+            await indexStudioMedia(env,longId,metadata);
 
             if (shortId) {
                 await putShortLink(env, shortId, longId);

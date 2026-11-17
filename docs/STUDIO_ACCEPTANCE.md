@@ -34,3 +34,12 @@ After restoring the owner-authorized Preview credential and redeploying, real HT
 ## Local authenticated upload acceptance
 
 The local fixture server now also uses ephemeral Miniflare R2. Logged in with its fixture account, chose a 68-byte PNG through the file chooser and observed: successful uploads 1, failures 0, a newly visible media card, and both favorite/AI counts remaining 0. No remote Telegram calls or user media were used. Automated coverage also reads the stored R2 bytes and immediately edits the uploaded record through the D1 metadata API.
+
+
+## Indexed full-library search — 2026-11-17
+
+- Complete local suite: 185 passing. Seven real Miniflare D1 search regressions cover unloaded records, tied timestamp/name pagination, filter-bound cursors, direct/recursive folders, exact tags/types/favorites, immediate metadata updates/tombstones, literal wildcard handling and invalid/unready requests. Two UI request regressions cover stale responses, selection preservation, frozen pagination filters and metadata version preservation.
+- Local browser fixture: 107 media records; main view initially loads 100. Full-library search found the unloaded target. Opened its details, saved a new tag and immediately found it by exact tag. Loaded two search pages, selected 50 plus one item from the next page, and returned to the bulk toolbar with 51 selected. All writes affected local fixtures only.
+- Isolated Preview migration 0004 applied; all 9 current KV media keys covered by derived inventory. Editable metadata row/version/deletion aggregates unchanged; foreign_key_check empty. Catalog readiness enabled only after those checks. No environment variables or credentials changed.
+- Full authenticated remote search/browser acceptance remains distinct from local fixture acceptance. Deployment build/unauthenticated HTTP verification must be reported separately. Remote Preview uploads remain intentionally disabled.
+- Tag suggestions are capped at 500, with exact typed input supported. Concurrent edits may change matches between pages; keyset pagination is not a whole-session snapshot.

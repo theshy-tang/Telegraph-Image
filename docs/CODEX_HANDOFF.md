@@ -231,3 +231,14 @@ Codex 能回答以下问题才算完成接手：它知道当前分支/PR 与 Pro
 - Added authenticated upload and frontend regressions plus real local Miniflare R2/D1 upload-to-edit checks. Local browser uploaded a 68-byte fixture PNG and observed one successful upload and its new card; remote Telegram credentials/data were not used. See docs/PRODUCTION_READINESS.md for the approval-dependent production plan and rollback constraints.
 
 - Final verification for this batch: 176 tests passing, including 12 new upload/UI regressions. No environment variables, secrets, production bindings or production data were changed.
+
+
+## 2026-11-17 full-library search
+
+- New authenticated GET /api/manage/search queries a derived D1 inventory instead of scanning all KV pages in the browser. Migration 0004 adds studio_media_inventory and studio_catalog_state. No new environment flag or secret is needed; the existing metadata-D1 mode plus ready=1 gates availability.
+- Queries overlay current D1 editable metadata, membership and tombstones. Bound parameters protect text filters; keyset cursors bind normalized filters and use media ID tiebreakers. Supports keywords, exact tag/legacy-album, media type, favorite/publication, folder/explicit descendants, date/name sorting. Suggestions contain at most 500 live tags. Search reads no KV raw values.
+- Separate full-library dialog preserves C hybrid browsing and existing loaded-data search. Results open the editable inspector and feed existing cross-page selection/batch processing. Reset/close abort requests; generation checks discard late responses; old responses cannot downgrade newer item versions. Pagination keeps submitted filters until a new search.
+- Current uploader indexes confirmed KV records when the catalog tables exist; old deployments/direct KV writers need an inventory reconciliation. Derived inventory does not replace original provider records. Index initialization uses whitelisted metadata only, verifies full key coverage and leaves existing versioned edits/tombstones intact. Set ready last, and leave it false on incomplete import.
+- 185 tests passing. Local 107-record browser fixture verified unloaded discovery, edit-to-search consistency and selection of 51 records across pages. These are local fixture tests, not authenticated remote search acceptance.
+- Preview only: applied migration 0004, indexed all 9 existing media keys, verified unchanged editable counts/version/deletion aggregates and no FK violations, then enabled ready. No KV writes, original media/link changes, environment/credential changes, Production operations or PR merge.
+- Next: confirm feature-branch deployment and remote runtime HTTP behavior; full authenticated Preview search acceptance is still separate. Production migration continues to require explicit approval and a separate database. See studio/README.md and docs/STUDIO_ACCEPTANCE.md for operating limits.
