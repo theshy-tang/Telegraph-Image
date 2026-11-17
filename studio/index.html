@@ -767,8 +767,8 @@ function actionPayload(action){
 async function runAction(action,override=null){
   if(state.busy||!state.selected.size)return;
   if(action==='move_folder' && override===null){openMoveDialog();return;}
-  if(action==='clear_folder')action='move_folder';
   const additional=override||actionPayload(action);if(additional===null)return;
+  if(action==='clear_folder')action='move_folder';
   const ids=[...state.selected];
   if(action==='publish'&&!confirm('将 '+ids.length+' 个媒体标记为 AI 已发布。符合图片格式的文件会出现在无需登录的公开目录里，确认继续？'))return;
   state.busy=true;setBusyUI(true);

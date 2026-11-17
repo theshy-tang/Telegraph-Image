@@ -154,3 +154,11 @@ Codex 能回答以下问题才算完成接手：它知道当前分支/PR 与 Pro
 - Repaired missing platform entries in package-lock.json. Do not commit installed node_modules changes.
 - Still outstanding: database-level concurrent cycle/depth/sibling protection; KV metadata lost-update/stale reads; legacy media deletion leaving D1 memberships; authenticated Studio browser workflow; production upload protection and liked-based public catalog require separately approved production rollout.
 - No production data/config changes, Telegram deletions, PR merge, or media URL changes performed.
+
+
+## 2026-11-17 toolbar unfiled regression fix
+
+- User reported `Invalid folder ID` from the toolbar's remove-from-album action. The UI renamed `clear_folder` to `move_folder` before constructing its payload, dropping the explicit `folderId: null` needed to unfile media.
+- Construct the payload using the original UI action before translating to the API action. Backend validation stays strict; missing folderId remains invalid.
+- Added toolbar request regressions covering unfile, move to a selected folder, and opening the destination dialog. The unfile test failed before the fix, while the other two passed. After the fix the full suite has 135 passing tests.
+- Existing D1 lifecycle test covers null membership deletion and verifies the original KV media survives. No existing Preview/production records or original media URLs were modified for this fix.
