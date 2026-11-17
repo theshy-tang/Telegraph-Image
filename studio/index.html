@@ -189,6 +189,8 @@ body.working button[data-action]{opacity:.6}
 .child-folder-arrow{color:#a3b3ca;font-size:20px}
 @media(max-width:900px){.folderbar .descendants-toggle{width:100%;justify-content:center}}
 
+.folderbar .ghost.deleting{color:#476a9f;background:#eaf0fb;border-color:#bed0ec;cursor:progress;min-width:132px}
+.folderbar .ghost.deleting:disabled{opacity:1}
 </style>
 </head>
 <body>
@@ -279,7 +281,7 @@ body.working button[data-action]{opacity:.6}
 (() => {
 'use strict';
 const $ = id => document.getElementById(id);
-const state = { auth:null,items:[],seen:new Set(),selected:new Set(),cursor:null,complete:false,busy:false,chip:'all',view:'all',limit:100,tiles:new Map(),folders:[],folderSelection:'all',editingFolderId:null,expandedFolders:new Set(),includeDescendants:false };
+const state = { auth:null,items:[],seen:new Set(),selected:new Set(),cursor:null,complete:false,busy:false,chip:'all',view:'all',limit:100,tiles:new Map(),folders:[],folderSelection:'all',editingFolderId:null,expandedFolders:new Set(),includeDescendants:false,deletingFolderId:null };
 const IMG = /\.(png|jpe?g|gif|webp|bmp|tiff?|ico|avif|apng)$/i;
 const VID = /\.(mp4|webm|mov|ogg|m4v|mkv|avi)$/i;
 const safeText = v => String(v ?? '');
@@ -484,7 +486,7 @@ function selectFolder(id){
   if(changed)state.includeDescendants=false;
   if(folderById(id))expandAncestors(id);
   $('editFolder').disabled=!folderById(id);
-  $('deleteFolder').disabled=!folderById(id);
+  $('deleteFolder').disabled=!folderById(id)||Boolean(state.deletingFolderId);
   $('pageTitle').textContent=id==='all'?({all:'全部素材',image:'图片',video:'视频',favorites:'我的收藏',published:'AI 已发布'})[state.chip]||'全部素材'
     :id==='unfiled'?'未归类':folderById(id)?.name||'我的相册';
   renderFolders();render();
@@ -498,7 +500,7 @@ async function loadFolders(){
     if(folderById(state.folderSelection))expandAncestors(state.folderSelection);
     renderFolders();
     $('editFolder').disabled=!folderById(state.folderSelection);
-    $('deleteFolder').disabled=!folderById(state.folderSelection);
+    $('deleteFolder').disabled=!folderById(state.folderSelection)||Boolean(state.deletingFolderId);
   }catch(e){toast('读取相册失败：'+e.message);}
 }
 function openFolderEditor(folder=null){
@@ -528,16 +530,42 @@ async function saveFolder(e){
   finally{button.disabled=false;button.textContent=editing?'保存修改':'创建相册';}
 }
 async function deleteSelectedFolder(){
+  if(state.deletingFolderId)return;
   const folder=folderById(state.folderSelection);if(!folder)return;
   if(!confirm('确定删除空相册「'+folder.name+'」吗？\\n如果相册里还有图片或子相册，系统会拒绝删除。图片文件不会被删除。'))return;
-  $('deleteFolder').disabled=true;
+  const button=$('deleteFolder');
+  const originalLabel=button.textContent;
+  state.deletingFolderId=folder.id;
+  button.disabled=true;button.classList.add('deleting');
+  button.setAttribute('aria-busy','true');
+  button.textContent='⌛ 正在检查并删除...';
+  $('status').textContent='正在确认「'+folder.name+'」是否为空，请勿重复操作。';
   try{
     await api('/api/manage/folders/'+folder.id,{method:'DELETE'});
-    state.folderSelection=folder.parentId||'all';
-    await loadFolders();selectFolder(state.folderSelection);
+    // KV listings can be briefly stale after a write. Once the DELETE API
+    // confirms success, update the tree in memory instead of fetching it again.
+    state.folders=state.folders.filter(f=>f.id!==folder.id);
+    state.expandedFolders.delete(folder.id);
+    if(state.folderSelection===folder.id){
+      const destination=folder.parentId&&folderById(folder.parentId)?folder.parentId:'all';
+      selectFolder(destination);
+    }else{
+      renderFolders();
+      render();
+    }
+    $('status').textContent='相册「'+folder.name+'」已删除，图片文件未受影响。';
     toast('空相册已删除');
-  }catch(e){toast('删除失败：'+e.message);}
-  finally{$('deleteFolder').disabled=!folderById(state.folderSelection);}
+  }catch(e){
+    const message=e.message.includes('Move or delete child folders')?'请先处理这个相册的子文件夹。':
+      e.message.includes('Move media out')?'这个相册还有素材，请先移出素材。':e.message;
+    $('status').textContent='删除未完成：'+message;
+    toast('删除失败：'+message);
+  }finally{
+    state.deletingFolderId=null;
+    button.classList.remove('deleting');button.removeAttribute('aria-busy');
+    button.textContent=originalLabel;
+    button.disabled=!folderById(state.folderSelection);
+  }
 }
 function openMoveDialog(){
   folderOptions($('folderDestination'),null,'未归类（根目录）');
