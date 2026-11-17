@@ -46,10 +46,15 @@ export async function onRequestDelete({request,env,params}) {
   const id=params.id;
   if(!folderId(id))return folderResponse({error:'Invalid folder ID'},400);
   try {
-    const folders=await allFolders(env.img_url);
+    // Independent safety checks run concurrently. Deletion still happens only
+    // after confirming both that there are no child folders and no media.
+    const [folders, hasMedia] = await Promise.all([
+      allFolders(env.img_url),
+      containsMedia(env.img_url,id)
+    ]);
     if(!folders.some(f=>f.id===id))return folderResponse({error:'Folder not found'},404);
     if(hasChildFolder(folders,id))return folderResponse({error:'Move or delete child folders first'},409);
-    if(await containsMedia(env.img_url,id))return folderResponse({error:'Move media out of this folder before deleting'},409);
+    if(hasMedia)return folderResponse({error:'Move media out of this folder before deleting'},409);
     await env.img_url.delete(folderKey(id));
     return folderResponse({deleted:id});
   }catch(e){console.error('Delete folder failed',e);return folderResponse({error:'Cannot verify that folder is empty'},503);}
