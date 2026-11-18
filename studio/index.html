@@ -196,6 +196,21 @@ body.working button[data-action]{opacity:.6}
 .catalog-dialog{width:95vw;max-width:min(1050px,95vw);max-height:90vh;overflow:auto}.catalog-form{padding:10px 24px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.catalog-form label{display:flex;flex-direction:column;gap:5px;font-size:13px;font-weight:600}.catalog-form input,.catalog-form select{min-width:0;width:100%;box-sizing:border-box}.catalog-form .catalog-descendants{flex-direction:row;align-items:center}.catalog-descendants input{width:auto}.catalog-summary{padding:15px 24px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;color:#63748f;font-size:13px}.catalog-summary span{flex:1}.catalog-results{padding:0 24px 22px;display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:14px}.catalog-result{content-visibility:auto;contain-intrinsic-size:auto 240px;position:relative;border:1px solid #e3e9f3;border-radius:16px;overflow:hidden}.catalog-result>input{position:absolute;left:10px;top:10px;z-index:1;width:18px;height:18px;cursor:pointer}.catalog-preview{width:100%;height:100%;border:0;box-shadow:none;background:white;text-align:left;display:flex;flex-direction:column;gap:7px;padding:12px}.catalog-preview img{width:100%;height:125px;object-fit:cover;border-radius:9px}.catalog-preview strong{overflow-wrap:anywhere}.catalog-preview .muted{font-size:12px}@media(max-width:700px){.catalog-form{grid-template-columns:1fr 1fr}.catalog-results{grid-template-columns:1fr 1fr}}
 .global-tag-confirm{display:flex;gap:8px;align-items:flex-start;font-size:13px}.global-tag-confirm input{width:auto!important;flex:none;margin-top:3px}.global-tag-rows{display:flex;flex-direction:column;gap:8px;max-height:35vh;overflow:auto}.global-tag-row{display:flex;gap:8px;align-items:center;border:1px solid #e3e9f3;border-radius:12px;padding:10px}.global-tag-row strong{flex:1;overflow-wrap:anywhere}.global-tag-row span{white-space:nowrap;color:#76859c;font-size:13px}.global-tag-row button{padding:7px 10px}.global-tag-rows+button{margin-top:10px}#tagManagerEdit{margin-top:14px}#tagManagerEdit input,#tagManagerEdit select{width:100%;box-sizing:border-box}@media(max-width:600px){.global-tag-row{flex-wrap:wrap}.global-tag-row strong{flex-basis:55%}}
 .grid{--virtual-card-height:260px;overflow-anchor:none}.grid.virtualized .tile{height:var(--virtual-card-height)}.grid.virtualized .details{height:73px;min-height:0}.grid-spacer{grid-column:1/-1;pointer-events:none}.grid .offscreen-focus{position:absolute!important;left:-10000px;top:0;width:1px!important;height:1px!important;overflow:hidden}@media(max-width:540px){.grid{--virtual-card-height:220px}.grid.virtualized .details{height:74px}}
+/* Gallery preferences share exact geometry with the virtual viewport. */
+.gallery-view{display:flex;align-items:center;flex-wrap:wrap;gap:16px;margin-top:18px;color:#72819a;font-size:12px}
+.gallery-fit{display:inline-flex;background:#f3f6fa;border:1px solid #e8edf4;border-radius:10px;padding:3px;gap:3px}
+.gallery-fit button{border:0;background:transparent;box-shadow:none;color:#7b899d;padding:7px 12px;font-size:12px;border-radius:7px}
+.gallery-fit button[aria-pressed="true"]{background:#fff;color:#3d5e98;box-shadow:0 1px 5px #334b7414}
+.gallery-size,.gallery-info{display:flex;align-items:center;gap:9px;white-space:nowrap}.gallery-size input{width:125px;min-height:24px;padding:0;accent-color:#5779b3}.gallery-size output{min-width:38px;font-variant-numeric:tabular-nums;color:#9aa6b8}.gallery-info input{width:15px;height:15px;accent-color:#5779b3}
+#grid{--thumb-min:200px;--gallery-media-height:198px;--gallery-details-height:44px;--virtual-card-height:244px;grid-template-columns:repeat(auto-fill,minmax(min(100%,var(--thumb-min)),1fr));gap:14px;margin-top:17px}
+#grid .tile{border-radius:13px;box-shadow:none;min-width:0;height:var(--virtual-card-height)}
+#grid .media{height:var(--gallery-media-height);background:#f4f5f7}
+#grid[data-fit="contain"] .media img,#grid[data-fit="contain"] .media video{object-fit:contain}
+#grid[data-fit="cover"] .media img,#grid[data-fit="cover"] .media video{object-fit:cover}
+#grid .details{height:var(--gallery-details-height);min-height:0;padding:0 11px;display:flex;flex-direction:column;justify-content:center}
+#grid .filename{font-size:12px;font-weight:600}#grid .sub{margin-top:5px}
+#grid[data-info="compact"] .sub{display:none}
+@media(max-width:540px){.gallery-view{gap:10px 14px}.gallery-size input{width:90px}#grid{gap:11px}.gallery-info{margin-left:0}}
 </style>
 </head>
 <body>
@@ -251,6 +266,11 @@ body.working button[data-action]{opacity:.6}
 <div class="toolbar"><input id="search" class="search" placeholder="⌕ 搜索文件名、标签、相册..." aria-label="搜索素材"><select id="tagFilter" aria-label="按标签筛选"><option value="">全部标签</option></select><select id="albumFilter" title="旧版标签式相册（兼容旧数据）"><option value="">旧版相册标签</option></select><select id="order"><option value="new">最新上传</option><option value="old">最早上传</option><option value="name">名称排序</option></select></div>
 <div class="filterbar"><div class="toolbar" id="chips"><button data-chip="all" class="chip on">全部</button><button data-chip="image" class="chip">图片</button><button data-chip="video" class="chip">视频</button><button data-chip="favorites" class="chip">收藏</button><button data-chip="published" class="chip">AI 已发布</button></div><span class="muted" id="selectedInfo">未选择</span></div>
 <div id="bulkbar" class="bulkbar hidden"><span class="count" id="selectedCount">已选择 0 项</span><button data-action="favorite">♡ 收藏</button><button data-action="unfavorite">取消收藏</button><button data-action="add_tags">＋ 标签</button><button data-action="remove_tags">－ 标签</button><button data-action="move_folder">▤ 移入相册</button><button data-action="clear_folder">移出相册</button><button data-action="set_category">分类</button><button data-action="publish">✧ 发布 AI</button><button data-action="unpublish">撤销 AI 发布</button><button id="exportSelected" type="button">下载 / 导出</button><button id="clearSelection">清除选择</button></div>
+<div class="gallery-view" role="group" aria-label="图片展示设置">
+<div class="gallery-fit" role="group" aria-label="图片适应方式"><button type="button" id="galleryContain" aria-pressed="true">完整图</button><button type="button" id="galleryCover" aria-pressed="false">填满</button></div>
+<label class="gallery-size" for="gallerySize">缩略图大小 <input id="gallerySize" type="range" min="140" max="320" step="20" value="200"><output id="gallerySizeValue" for="gallerySize">200</output></label>
+<label class="gallery-info"><input id="galleryInfo" type="checkbox">详细信息</label>
+</div>
 <div id="grid" class="grid" aria-live="polite"></div>
 <div class="bottom-actions">
 <button id="loadMore" class="ghost">加载更多素材</button>
@@ -335,6 +355,7 @@ body.working button[data-action]{opacity:.6}
 <dialog id="preview"><div class="modalhead"><strong>素材详情</strong><button class="close" id="closePreview">✕</button></div><div class="modalbody"><div id="previewMedia"></div><div class="modalinfo" id="previewInfo"></div></div></dialog>
 <div id="toast" class="toast" role="status"></div>
 <script src="/studio/grid-window.js"></script>
+<script src="/studio/gallery-view.js"></script>
 <script src="/studio/export-utils.js"></script>
 <script>
 (() => {
@@ -709,18 +730,39 @@ function updateSelectionUI(matches){
     tile.classList.toggle('picked',checked);
   }
 }
+const galleryPreferences=StudioGallery.read(window);
 const mediaViewport={items:[],key:null,frame:null,metrics:null,width:0};
+function applyGalleryView(preservePosition=false){
+  const grid=$('grid'),old=mediaViewport.metrics,top=grid.getBoundingClientRect().top;
+  const anchor=preservePosition&&old&&top<0?Math.floor(-top/(old.height+old.gap))*old.columns:null;
+  grid.style.setProperty('--thumb-min',galleryPreferences.size+'px');
+  grid.style.setProperty('--gallery-details-height',galleryPreferences.info?'72px':'44px');
+  grid.dataset.fit=galleryPreferences.fit;grid.dataset.info=galleryPreferences.info?'detailed':'compact';
+  $('galleryContain').setAttribute('aria-pressed',String(galleryPreferences.fit==='contain'));
+  $('galleryCover').setAttribute('aria-pressed',String(galleryPreferences.fit==='cover'));
+  $('gallerySize').value=galleryPreferences.size;$('gallerySizeValue').value=galleryPreferences.size+' px';
+  $('galleryInfo').checked=galleryPreferences.info;
+  mediaViewport.metrics=null;mediaViewport.key=null;
+  if(anchor!==null&&mediaViewport.items.length>200){const next=gridMetrics();window.scrollTo({top:Math.max(0,window.scrollY+top+Math.floor(anchor/next.columns)*(next.height+next.gap)),behavior:'instant'});}
+  paintMediaWindow(true);
+}
+function saveGalleryView(){StudioGallery.save(window,galleryPreferences);applyGalleryView(true);}
+
 function gridMetrics(){
   const grid=$('grid');if(!mediaViewport.metrics||mediaViewport.width!==grid.clientWidth){
     const style=getComputedStyle(grid);mediaViewport.width=grid.clientWidth;
-    mediaViewport.metrics={columns:Math.max(1,style.gridTemplateColumns.split(' ').filter(Boolean).length),height:parseFloat(style.getPropertyValue('--virtual-card-height'))||260,gap:parseFloat(style.rowGap)||0};
+    const tracks=style.gridTemplateColumns.split(' ').filter(Boolean);
+    const mediaHeight=Math.max(1,(parseFloat(tracks[0])||grid.clientWidth)-2);
+    const height=mediaHeight+(galleryPreferences.info?72:44)+2;
+    grid.style.setProperty('--gallery-media-height',mediaHeight+'px');grid.style.setProperty('--virtual-card-height',height+'px');
+    mediaViewport.metrics={columns:Math.max(1,tracks.length),height,gap:parseFloat(style.rowGap)||0};
   }return mediaViewport.metrics;
 }
 function paintMediaWindow(force=false){
   const grid=$('grid'),list=mediaViewport.items;if(!list.length)return;
   const virtual=list.length>200,metrics=gridMetrics(),rect=grid.getBoundingClientRect();
   const range=virtual?StudioGrid.range({count:list.length,...metrics,top:rect.top,viewport:window.innerHeight}):{start:0,end:list.length,before:0,after:0};
-  const key=[virtual,range.start,range.end,metrics.columns].join(':');if(!force&&key===mediaViewport.key)return;mediaViewport.key=key;
+  const key=[virtual,range.start,range.end,metrics.columns,metrics.height].join(':');if(!force&&key===mediaViewport.key)return;mediaViewport.key=key;
   const active=document.activeElement,focused=grid.contains(active)?active.closest('.tile'):null;
   const frag=document.createDocumentFragment(),visible=new Set();
   const spacer=height=>{const div=elt('div','grid-spacer');div.style.height=height+'px';div.setAttribute('aria-hidden','true');return div;};
@@ -782,6 +824,7 @@ function refreshTile(tile,x){
   const image=tile.querySelector('img');if(image)image.alt=x.name;
   tile._filename.textContent=x.name;
   tile._sub.textContent=[x.category||x.type.toUpperCase(),formatBytes(x.bytes),...x.albums.slice(0,1)].filter(Boolean).join(' · ');
+  tile.title=x.name+' · '+tile._sub.textContent;
   tile._tags.replaceChildren();
   if(x.liked)tile._tags.append(elt('span','overlay-tag','♡ 收藏'));
   if(x.published)tile._tags.append(elt('span','overlay-tag','✧ AI'));
@@ -1325,6 +1368,11 @@ $('folderMoveSave').addEventListener('click',async()=>{
   await runAction('move_folder',{folderId});
 });
 $('reload').addEventListener('click',()=>loadPage(true));
+$('galleryContain').addEventListener('click',()=>{galleryPreferences.fit='contain';saveGalleryView();});
+$('galleryCover').addEventListener('click',()=>{galleryPreferences.fit='cover';saveGalleryView();});
+$('gallerySize').addEventListener('input',e=>{galleryPreferences.size=Number(e.target.value);saveGalleryView();});
+$('galleryInfo').addEventListener('change',e=>{galleryPreferences.info=e.target.checked;saveGalleryView();});
+applyGalleryView();
 window.addEventListener('scroll',scheduleMediaWindow,{passive:true});
 window.addEventListener('resize',()=>{mediaViewport.metrics=null;scheduleMediaWindow();});
 if(typeof ResizeObserver!=='undefined')new ResizeObserver(()=>{mediaViewport.metrics=null;scheduleMediaWindow();}).observe($('grid'));
