@@ -25,8 +25,8 @@ const {createStudioDB}=require('../studio-runtime');const {createMockKV}=require
   try{
    const url=new URL(req.url,'http://127.0.0.1:'+port);
    if(url.pathname.startsWith('/file/')){if(url.pathname.startsWith('/file/r2-')){const item=await runtime.bucket.get(decodeURIComponent(url.pathname.slice(6)));if(!item){res.writeHead(404);res.end();return;}res.writeHead(200,{'Content-Type':item.httpMetadata?.contentType||'application/octet-stream'});res.end(Buffer.from(await item.arrayBuffer()));return;}res.writeHead(200,{'Content-Type':'image/png'});res.end(Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jhT8AAAAASUVORK5CYII=','base64'));return;}
-   if(url.pathname==='/studio/theme-paper.css'){res.writeHead(200,{'Content-Type':'text/css'});res.end(fs.readFileSync(path.join(__dirname,'../../studio/theme-paper.css')));return;}
-   if(['/studio/export-utils.js','/studio/grid-window.js','/studio/gallery-view.js','/studio/justified-layout.js'].includes(url.pathname)){res.writeHead(200,{'Content-Type':'application/javascript'});res.end(fs.readFileSync(path.join(__dirname,'../..'+url.pathname)));return;}
+   if(['/studio/theme-paper.css','/studio/wallpaper.css'].includes(url.pathname)){res.writeHead(200,{'Content-Type':'text/css'});res.end(fs.readFileSync(path.join(__dirname,'../..'+url.pathname)));return;}
+   if(['/studio/export-utils.js','/studio/grid-window.js','/studio/gallery-view.js','/studio/justified-layout.js','/studio/wallpaper.js'].includes(url.pathname)){res.writeHead(200,{'Content-Type':'application/javascript'});res.end(fs.readFileSync(path.join(__dirname,'../..'+url.pathname)));return;}
    if(!url.pathname.startsWith('/api/')){res.writeHead(200,{'Content-Type':'text/html; charset=utf-8'});res.end(fs.readFileSync(path.join(__dirname,'../../studio/index.html')));return;}
    const chunks=[];for await(const chunk of req)chunks.push(chunk);
    const request=new Request(url,{method:req.method,headers:req.headers,...(!['GET','HEAD'].includes(req.method)?{body:Buffer.concat(chunks)}:{})});

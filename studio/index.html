@@ -210,8 +210,10 @@ body.working button[data-action]{opacity:.6}
 @media(hover:none){#grid .details{opacity:1}}@media(max-width:540px){.gallery-view{gap:10px 14px}.gallery-size input{width:90px}}
 </style>
 <link rel="stylesheet" href="/studio/theme-paper.css">
+<link rel="stylesheet" href="/studio/wallpaper.css">
 </head>
 <body>
+<div id="wallpaperLayer" class="wallpaper-layer hidden" aria-hidden="true"><div id="wallpaperMedia" class="wallpaper-media"></div><div class="wallpaper-shade"></div></div>
 <div id="auth" class="authscreen">
 <div class="brand"><span class="brandmark">M</span><span>Media Studio</span></div>
 <h2>进入媒体工作台</h2><p class="muted">使用已有的图床后台账号登录。凭据只保存在当前页面的内存中，刷新页面后需要重新登录。</p>
@@ -239,7 +241,7 @@ body.working button[data-action]{opacity:.6}
 <main>
 <div class="top">
 <div><h1 id="pageTitle">全部素材</h1><div class="muted">管理你的图片、视频、私人收藏和工作素材</div></div>
-<div class="toolbar"><button id="reload" class="ghost">↻ 刷新</button><button id="uploadBtn" class="primary">↑ 上传素材</button><input id="fileInput" type="file" accept="image/*,video/*" multiple class="hidden"></div>
+<div class="toolbar"><button id="wallpaperOpen" type="button" class="ghost">背景设置</button><button id="wallpaperMotion" type="button" class="ghost hidden">暂停背景</button><button id="reload" class="ghost">↻ 刷新</button><button id="uploadBtn" class="primary">↑ 上传素材</button><input id="fileInput" type="file" accept="image/*,video/*" multiple class="hidden"></div>
 </div>
 <div class="stats">
 <div class="stat"><span class="muted">已加载素材</span><strong id="statAll">0</strong><small>支持继续加载</small></div>
@@ -351,9 +353,26 @@ body.working button[data-action]{opacity:.6}
 <div class="folder-dialog-actions"><button type="button" class="ghost" id="tagCancel">取消</button><button type="submit" class="primary" id="tagSave">应用标签</button></div>
 </form></dialog>
 <dialog id="preview"><div class="modalhead"><strong>素材详情</strong><button class="close" id="closePreview">✕</button></div><div class="modalbody"><div id="previewMedia"></div><div class="modalinfo" id="previewInfo"></div></div></dialog>
+<dialog id="wallpaperDialog" class="wallpaper-dialog" aria-labelledby="wallpaperTitle">
+<div class="modalhead"><strong id="wallpaperTitle">背景设置</strong><button type="button" class="close" id="wallpaperClose" aria-label="关闭背景设置">✕</button></div>
+<form id="wallpaperForm"><div class="wallpaper-fields">
+<label>背景类型<select id="wallpaperType"><option value="default">暖灰纯色</option><option value="image">素材库图片</option><option value="video">素材库视频</option></select></label>
+<div id="wallpaperOptions" class="wallpaper-options hidden">
+<label>查找已加载素材<input id="wallpaperSearch" type="search" placeholder="搜索文件名"></label>
+<label>选择背景素材<select id="wallpaperAsset"><option value="">请选择素材</option></select></label>
+<button type="button" id="wallpaperMore" class="ghost">加载更多素材</button>
+<label>背景遮罩<span class="wallpaper-range"><input id="wallpaperMask" type="range" min="35" max="85" value="60"><output id="wallpaperMaskValue">60%</output></span></label>
+<label>面板不透明度<span class="wallpaper-range"><input id="wallpaperSurface" type="range" min="80" max="100" value="94"><output id="wallpaperSurfaceValue">94%</output></span></label>
+</div>
+<p class="wallpaper-help">仅使用现有素材库中的图片或视频。选择范围为已加载素材，可继续加载；不修改原文件、收藏或 AI 发布状态。壁纸铺满屏幕时可能裁切边缘，素材网格仍按原比例显示。</p>
+<p class="wallpaper-help">视频静音循环；后台标签页暂停播放，并尊重系统减少动态效果设置。MP4/WebM 通常更易播放，实际兼容性取决于编码。偏好只保存在当前浏览器、当前站点；登录后恢复。</p>
+<div id="wallpaperStatus" class="wallpaper-status" role="status"></div>
+</div><div class="wallpaper-actions"><button type="button" id="wallpaperReset" class="ghost">恢复默认</button><button type="button" id="wallpaperCancel" class="ghost">取消</button><button type="submit" class="primary">应用背景</button></div></form>
+</dialog>
 <div id="toast" class="toast" role="status"></div>
 <script src="/studio/justified-layout.js"></script>
 <script src="/studio/gallery-view.js"></script>
+<script src="/studio/wallpaper.js"></script>
 <script src="/studio/export-utils.js"></script>
 <script>
 (() => {
@@ -1297,6 +1316,45 @@ async function upload(files){
   $('status').textContent='上传完成：成功 '+good+' 项，失败 '+failed+' 项。'+(good?'新素材位于未归类。':'')+errors.slice(0,3).join('；');
   toast('上传成功 '+good+'，失败 '+failed);
 }
+let wallpaperConfig=StudioWallpaper.normalize(),wallpaperDraft=StudioWallpaper.normalize();
+const wallpaper=StudioWallpaper.create({host:window,layer:$('wallpaperLayer'),container:$('wallpaperMedia'),urlFor:fileUrl,onStatus:result=>{
+  $('wallpaperMotion').classList.toggle('hidden',!result.video);$('wallpaperMotion').textContent=result.paused?'播放背景':'暂停背景';
+  $('wallpaperStatus').textContent=result.message;
+}});
+function startWallpaper(){wallpaperConfig=StudioWallpaper.read(window);wallpaper.apply(wallpaperConfig);}
+function wallpaperChoices(){
+  const type=$('wallpaperType').value,query=$('wallpaperSearch').value.trim().toLocaleLowerCase(),select=$('wallpaperAsset'),chosen=wallpaperDraft.id;
+  const eligible=state.items.filter(x=>StudioWallpaper.mediaType(x.id)===type);
+  const matches=eligible.filter(x=>x.name.toLocaleLowerCase().includes(query));
+  select.replaceChildren(new Option('请选择素材',''));
+  if(chosen&&!eligible.some(x=>x.id===chosen)&&StudioWallpaper.mediaType(chosen)===type)select.add(new Option('当前壁纸（不在已加载列表中）',chosen));
+  for(const x of matches)select.add(new Option(x.name,x.id));
+  if(chosen&&eligible.some(x=>x.id===chosen)&&!matches.some(x=>x.id===chosen)){const x=eligible.find(x=>x.id===chosen);select.add(new Option('已选：'+x.name,chosen));}
+  select.value=chosen;$('wallpaperOptions').classList.toggle('hidden',type==='default');
+  $('wallpaperMore').classList.toggle('hidden',state.complete);$('wallpaperMore').disabled=state.busy;
+}
+$('wallpaperOpen').addEventListener('click',()=>{
+  wallpaperDraft={...wallpaperConfig};$('wallpaperType').value=wallpaperDraft.type;$('wallpaperSearch').value='';
+  $('wallpaperMask').value=wallpaperDraft.mask;$('wallpaperMaskValue').value=wallpaperDraft.mask+'%';$('wallpaperSurface').value=wallpaperDraft.surface;$('wallpaperSurfaceValue').value=wallpaperDraft.surface+'%';
+  wallpaperChoices();$('wallpaperDialog').showModal();
+});
+$('wallpaperType').addEventListener('change',()=>{wallpaperDraft.type=$('wallpaperType').value;if(StudioWallpaper.mediaType(wallpaperDraft.id)!==wallpaperDraft.type)wallpaperDraft.id='';wallpaperDraft.paused=false;wallpaperChoices();});
+$('wallpaperSearch').addEventListener('input',wallpaperChoices);
+$('wallpaperAsset').addEventListener('change',()=>{wallpaperDraft.id=$('wallpaperAsset').value;});
+for(const [id,key] of [['wallpaperMask','mask'],['wallpaperSurface','surface']])$(id).addEventListener('input',e=>{wallpaperDraft[key]=Number(e.target.value);$(id+'Value').value=e.target.value+'%';});
+$('wallpaperMore').addEventListener('click',async()=>{try{$('wallpaperMore').disabled=true;await loadPage();}finally{wallpaperChoices();}});
+function commitWallpaper(config){
+  wallpaperConfig=StudioWallpaper.normalize(config);const saved=StudioWallpaper.save(window,wallpaperConfig);wallpaper.apply(wallpaperConfig);
+  $('wallpaperDialog').close();toast(saved?'背景设置已应用。':'背景已应用；浏览器禁止存储，本次设置无法记忆。');
+}
+$('wallpaperForm').addEventListener('submit',e=>{e.preventDefault();wallpaperDraft.type=$('wallpaperType').value;
+  if(wallpaperDraft.type!=='default'&&StudioWallpaper.mediaType(wallpaperDraft.id)!==wallpaperDraft.type){$('wallpaperStatus').textContent='请先选择匹配的背景素材。';return;}
+  commitWallpaper(wallpaperDraft);
+});
+$('wallpaperReset').addEventListener('click',()=>commitWallpaper({}));
+for(const id of ['wallpaperClose','wallpaperCancel'])$(id).addEventListener('click',()=>$('wallpaperDialog').close());
+$('wallpaperMotion').addEventListener('click',()=>{const paused=wallpaper.toggle();if(typeof paused==='boolean'){wallpaperConfig.paused=paused;StudioWallpaper.save(window,wallpaperConfig);}});
+window.addEventListener('pagehide',event=>{if(!event.persisted)wallpaper.destroy();});
 $('loginForm').addEventListener('submit',async e=>{
   e.preventDefault();
   const user=$('user').value,pass=$('pass').value;
@@ -1318,7 +1376,7 @@ $('loginForm').addEventListener('submit',async e=>{
     catch{throw Error('后台返回的不是 JSON，请检查 Preview 的 KV 绑定和 Pages Functions。响应开头：'+body.slice(0,70));}
     if(!Array.isArray(json.keys))throw Error('图床后台返回的数据格式不正确，请检查 KV 配置。');
     $('globalSearchOpen').disabled=true;$('tagManagerOpen').disabled=true;$('indexMaintenanceOpen').disabled=true;
-    state.assetDetailsEnabled=Boolean(json.catalogReady);state.auth=candidate;$('pass').value='';$('auth').classList.add('hidden');$('app').classList.remove('hidden');if(IS_PREVIEW){$('uploadBtn').disabled=true;$('uploadBtn').title='预览环境仅同步正式图片目录，不允许上传，避免测试数据和真实 Telegram 存储混用';}await loadFolders();await loadPage();$('globalSearchOpen').disabled=!json.catalogReady;$('tagManagerOpen').disabled=!json.catalogReady;$('indexMaintenanceOpen').disabled=!json.catalogReady;$('globalSearchOpen').title=json.catalogReady?'按全库索引检索，不必先加载所有页面':'当前环境的全库索引尚未启用';
+    state.assetDetailsEnabled=Boolean(json.catalogReady);state.auth=candidate;$('pass').value='';$('auth').classList.add('hidden');$('app').classList.remove('hidden');if(IS_PREVIEW){$('uploadBtn').disabled=true;$('uploadBtn').title='预览环境仅同步正式图片目录，不允许上传，避免测试数据和真实 Telegram 存储混用';}await loadFolders();await loadPage();startWallpaper();$('globalSearchOpen').disabled=!json.catalogReady;$('tagManagerOpen').disabled=!json.catalogReady;$('indexMaintenanceOpen').disabled=!json.catalogReady;$('globalSearchOpen').title=json.catalogReady?'按全库索引检索，不必先加载所有页面':'当前环境的全库索引尚未启用';
   }catch(err){$('loginError').textContent=err.message;}
 });
 $('globalSearchOpen').addEventListener('click',openCatalog);
