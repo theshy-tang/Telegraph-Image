@@ -1,8 +1,8 @@
 # Current Production status — 2026-11-17
 
-Production release updated 2026-11-18 with owner authorization: https://my-image-bed.pages.dev/studio/ . Production pinned to release/media-studio-v1-20261117 at 7469c21 (2026-11-18 gallery/theme/wallpaper release); feature/media-studio-v1 stays development, main and Draft PR #1 unmerged. Original Production KV 8a9b05daf9384496887d063292832345 retained; dedicated Production D1 28f78f0b-b3b4-4c0e-a5c7-d7382d93aa7d enabled. Initial migration retained nine records/favorites; these are historical migration counts, not current library totals. Upload mode admin; write pause removed. See docs/PRODUCTION_RELEASE_20261117.md.
+Production release updated 2026-11-18 with owner authorization: https://my-image-bed.pages.dev/studio/ . Production pinned to release/media-studio-v1-20261117 at 769abc4 (2026-11-18 ordered listing and upload diagnostics); feature/media-studio-v1 stays development, main and Draft PR #1 unmerged. Original Production KV 8a9b05daf9384496887d063292832345 retained; dedicated Production D1 28f78f0b-b3b4-4c0e-a5c7-d7382d93aa7d enabled. Initial migration retained nine records/favorites; these are historical migration counts, not current library totals. Upload mode admin; write pause removed. See docs/PRODUCTION_RELEASE_20261117.md.
 
-Backup KV 6f21d4feb8424b22920201bb729ec88e. Initial Production deployment beaf8f25-1dee-4483-bb0a-89eff44583c2; current presentation deployment ca1e1b4a-2aae-4f4c-aa67-122fd3858c37. Earlier sections below describe historical pre-release states, not current Production.
+Backup KV 6f21d4feb8424b22920201bb729ec88e. Initial Production deployment beaf8f25-1dee-4483-bb0a-89eff44583c2; current upload/list hotfix deployment 29e9a519-4231-4a5e-8447-22e2cd293d62. Earlier sections below describe historical pre-release states, not current Production.
 
 # Codex 项目交接手册 — Media Studio
 > 更新于 2026-11-17。**仅为开发分支 `feature/media-studio-v1` 的交接资料。** 工程现状应以当前 Git/GitHub、Cloudflare 环境和代码为准，不能把文档当作运行态的唯一真相。
@@ -379,3 +379,9 @@ Owner approved Production deployment of justified gallery, warm paper palette an
 
 Owner repeated one upload and saw another Telegram copy but no UI feedback. A read-only check still found571 indexed media with the previous latest timestamp. Added a persistent sticky upload progress/result panel near the top, feedback before awaiting list refresh, and a120-second per-file abort that reports unknown outcome and discourages automatic reupload. Previously status was below the entire gallery and toast waited for refresh. Telegram receipt alone is not a complete registration confirmation; the exact past request failure remains unproven and no original recovery ID is available.
 33 related tests pass, including stalled-refresh/abort feedback. Production release of09f83c3 was rejected by automatic review because the owner has not explicitly approved this new upload/list hotfix; do not bypass that rejection or treat upload evidence as release permission. Current changes remain development Preview only.
+
+
+## 2026-11-18 approved upload/list hotfix released
+
+Owner explicitly replied 同意 to the new upload/list fix deployment request, resolving the earlier Production approval block. Production release branch advanced from7469c21 to769abc437d60181328572b0c062b946c4783f863. Deployment29e9a519-4231-4a5e-8447-22e2cd293d62 succeeded and is canonical. 33 relevant tests had passed on this exact code. KV/D1/metadata flag/admin upload settings are unchanged; no source data repair, paid plan change, test upload or Draft PR merge.
+Formal page contains ordered-list requests, persistent progress, timeout and staged recovery feedback. Unauthenticated ordered list/upload remain401; config ready/auth true. Previous missing upload remains unregistered: do NOT claim it recovered or that the exact original failure cause is proven. Owner can now try one file and preserve the specific result/recovery link; avoid repeated batch uploads.

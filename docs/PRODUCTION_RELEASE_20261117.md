@@ -55,3 +55,12 @@ Actual deployment and migration verification are recorded below. Production cred
 - Re-ran 16 focused preference/layout/wallpaper regressions, all passed. Canonical Studio and four changed supporting assets return200. Config returns200 with uploadRequiresAuth true and no read-only header; anonymous management/list and upload both401. Actual video codec/playback is still dependent on browser and selected file; no new real-media mutation or browser-authenticated playback claim.
 - Code rollback target is previous successful Production 267a0a32-b4bf-4bb2-a488-9d7953aeb4bf / 0da2c32, which preserves the same D1-capable backend. Preserve Production data and bindings on rollback.
 - Wallpaper settings persist only per browser/origin; Preview preferences do not automatically transfer to Production. Development documentation commits remain Preview-only.
+
+
+## 2026-11-18 approved ordered-list/upload-feedback hotfix
+
+- Owner explicitly approved this hotfix after automatic review required separate approval. Released769abc437d60181328572b0c062b946c4783f863 (Preview7442d2fe) to fixed Production branch; deployment29e9a519-4231-4a5e-8447-22e2cd293d62 succeeded and is canonical. Main/Draft PR remain unmerged.
+- Main listing now opts into full-library D1 ordering with keyset pagination; legacy no-order KV cursors preserved. Upload failures retain staged diagnostics and original recovery link only after provider confirmation. Sticky progress appears immediately, result precedes list refresh;120-second abort reports unknown outcome.
+-33 related tests passed. Actual Production page200 contains all changed controls/logic; anonymous ordered listing/upload401; config200 ready/auth true. KV8a9b05daf9384496887d063292832345, D1 28f78f0b-b3b4-4c0e-a5c7-d7382d93aa7d, metadata flag and admin upload unchanged. No credential/migration/plan change or real-media mutation.
+- Exact original afternoon registration failure remains unconfirmed; the previous screenshot files have not been automatically recovered. Do not equate deployment with successful authenticated end-to-end upload. Billing lookup restriction was not bypassed and is unrelated to this explicit release approval.
+- Rollback target ca1e1b4a-2aae-4f4c-aa67-122fd3858c37 /7469c21 retains D1-capable backend; do not roll data or disable D1.
