@@ -45,15 +45,23 @@ export async function getMetadata(env, id) {
   return record.metadata;
 }
 
-export async function getOrCreateMetadata(env, id) {
+export async function getOrCreateMetadata(env, id, { persist = true } = {}) {
   const record = await env.img_url.getWithMetadata(id);
 
   if (record?.metadata) {
-    return normalizeMetadata(record.metadata, id);
+    return { ...record.metadata, ...normalizeMetadata(record.metadata, id) };
   }
 
   const metadata = createDefaultMetadata(id);
-  await putMetadata(env, id, metadata);
+  if (persist) {
+    try {
+      await putMetadata(env, id, metadata);
+    } catch {
+      // Read-through initialization must not turn a served file into HTTP 500.
+      // Do not log provider errors: they may contain private references.
+      console.error('File metadata initialization unavailable');
+    }
+  }
   return metadata;
 }
 

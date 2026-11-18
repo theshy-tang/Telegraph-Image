@@ -44,7 +44,7 @@ export async function onRequest(context) {
         return withFileHeaders(response, fileId);  // Directly return image response, terminate execution
     }
 
-    const metadata = await getOrCreateMetadata(env, fileId);
+    const metadata = await getOrCreateMetadata(env, fileId, { persist: request.method !== 'HEAD' });
 
     // Handle based on ListType and Label
     if (isWhitelisted(metadata)) {
@@ -60,16 +60,24 @@ export async function onRequest(context) {
         return Response.redirect(`${url.origin}/whitelist-on.html`, 302);
     }
 
+    // HEAD checks existing access policy without moderating or writing records.
+    if (request.method === 'HEAD') return withFileHeaders(response, fileId);
+
     // If no metadata or further actions required, moderate content and add to KV if needed
+    const previousLabel = metadata.Label;
     const moderationResult = await moderateFile(env, url, fileId, metadata, response);
+    if (metadata.Label !== previousLabel) {
+        try {
+            await putMetadata(env, fileId, metadata);
+        } catch {
+            // Quota/transient write failures must not discard an upstream file.
+            // The current verdict is still enforced even if it cannot be saved.
+            console.error('File moderation metadata persistence unavailable');
+        }
+    }
     if (moderationResult.blocked) {
-        await putMetadata(env, fileId, metadata);
         return Response.redirect(`${url.origin}/block-img.html`, 302);
     }
-
-    // Only save metadata if content is not adult content
-    // Adult content cases are already handled above and will not reach this point
-    await putMetadata(env, fileId, metadata);
 
     // Return file content
     return withFileHeaders(response, fileId);
