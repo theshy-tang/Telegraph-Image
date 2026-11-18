@@ -378,7 +378,7 @@ body.working button[data-action]{opacity:.6}
 (() => {
 'use strict';
 const $ = id => document.getElementById(id);
-const state = { auth:null,items:[],seen:new Set(),selected:new Set(),cursor:null,complete:false,busy:false,chip:'all',view:'all',limit:100,tiles:new Map(),folders:[],folderSelection:'all',editingFolderId:null,expandedFolders:new Set(),includeDescendants:false,deletingFolderId:null,folderBackend:'kv' };
+const state = { auth:null,items:[],seen:new Set(),selected:new Set(),cursor:null,complete:false,busy:false,chip:'all',view:'all',limit:100,tiles:new Map(),folders:[],folderSelection:'all',editingFolderId:null,expandedFolders:new Set(),includeDescendants:false,deletingFolderId:null,folderBackend:'kv',listScope:'loaded',libraryTotal:null };
 const IMG = /\.(png|jpe?g|gif|webp|bmp|tiff?|ico|avif|apng)$/i;
 const VID = /\.(mp4|webm|mov|ogg|m4v|mkv|avi)$/i;
 const safeText = v => String(v ?? '');
@@ -389,7 +389,7 @@ const FILE_ORIGIN = IS_PREVIEW ? 'https://my-image-bed.pages.dev' : location.ori
 const publicFileUrl = id => FILE_ORIGIN + '/file/' + encodeURIComponent(id);
 const fileUrl = id => IS_PREVIEW ? '/api/studio/media/' + encodeURIComponent(id) : publicFileUrl(id);
 function toast(message){const el=$('toast');el.textContent=(/成功|完成|已复制/.test(message)?'✓  ':'●  ')+message;el.classList.remove('toast-visible');void el.offsetWidth;el.classList.add('toast-visible');clearTimeout(toast.timer);toast.timer=setTimeout(()=>el.classList.remove('toast-visible'),3600);}
-function setBusyUI(busy){document.querySelectorAll('#bulkbar [data-action],#selectPage,#selectAllMatched,#reload').forEach(el=>el.disabled=busy);document.body.classList.toggle('working',busy);}
+function setBusyUI(busy){document.querySelectorAll('#bulkbar [data-action],#selectPage,#selectAllMatched,#reload,#order').forEach(el=>el.disabled=busy);document.body.classList.toggle('working',busy);}
 function authHeader(){return {'Authorization': 'Basic '+state.auth};}
 async function api(url,options={}){
   const r=await fetch(url,{...options,headers:{...authHeader(),...(options.headers||{})},cache:'no-store'});
@@ -403,14 +403,15 @@ function normalize(raw){
     tags:Array.isArray(m.tags)?m.tags.filter(x=>typeof x==='string'):[],
     albums:Array.isArray(m.albums)?m.albums.filter(x=>typeof x==='string'):[],category:m.category||'',description:typeof m.description==='string'?m.description:'',sourceUrl:typeof m.sourceUrl==='string'?m.sourceUrl:'',prompt:typeof m.prompt==='string'?m.prompt:'',folderId:typeof m.folderId==='string'?m.folderId:null,type:getType(id)};
 }
-async function loadPage(reset=false){
+async function loadPage(reset=false,{preserveSelection=false}={}){
   if(state.busy)return;
-  state.busy=true;$('loadMore').disabled=true;$('status').textContent='读取中...';
+  state.busy=true;$('order').disabled=true;$('loadMore').disabled=true;$('status').textContent='读取中...';
   try{
-    if(reset){state.items=[];state.seen.clear();state.cursor=null;state.complete=false;state.selected.clear();state.tiles.clear();$('grid').replaceChildren();}
-    const p=new URLSearchParams({limit:String(state.limit)});
+    if(reset){state.items=[];state.seen.clear();state.cursor=null;state.complete=false;if(!preserveSelection)state.selected.clear();state.tiles.clear();$('grid').replaceChildren();}
+    const p=new URLSearchParams({limit:String(state.limit),order:$('order').value});
     if(state.cursor)p.set('cursor',state.cursor);
     const r=await api('/api/manage/list?'+p);
+    state.listScope=r.orderScope||'loaded';state.libraryTotal=typeof r.total==='number'?r.total:null;
     for(const record of r.keys||[]){
       if(!isSafeId(record.name)||state.seen.has(record.name))continue;
       state.seen.add(record.name);state.items.push(normalize(record));
@@ -418,10 +419,10 @@ async function loadPage(reset=false){
     state.cursor=r.list_complete?null:(r.cursor||null);
     state.complete=Boolean(r.list_complete)||!state.cursor;
     render();renderFolders();
-    $('status').textContent=state.complete?'已经读取全部记录。':'还有未加载的素材；如需跨页选择，请使用「选择全部匹配结果」。';
+    $('status').textContent=state.complete?'已经读取全部记录。':(state.listScope==='library'?'已按全库排序加载当前页；':'当前排序仅作用于已加载素材；')+'更多素材可继续加载或使用「全库检索」。';
     return true;
   }catch(e){toast(e.message);$('status').textContent='加载失败：'+e.message;return false;}
-  finally{state.busy=false;$('loadMore').disabled=state.complete;}
+  finally{state.busy=false;$('order').disabled=false;$('loadMore').disabled=state.complete;}
 }
 
 function folderById(id){return state.folders.find(f=>f.id===id)||null;}
@@ -859,7 +860,7 @@ function render(){
     albumSelect.dataset.signature=signature;
   }
   albumSelect.classList.toggle('hidden',albums.length===0);
-  $('resultCount').textContent='当前匹配 '+list.length+' 项 · 已加载 '+state.items.length+' 项';
+  $('resultCount').textContent='当前匹配 '+list.length+' 项 · 已加载 '+state.items.length+' 项'+(state.listScope==='library'&&state.libraryTotal!==null?' / 索引库共 '+state.libraryTotal+' 项':'');
   $('statAll').textContent=state.items.length;
   $('statFavorite').textContent=state.items.filter(x=>x.liked).length;
   $('statAI').textContent=state.items.filter(x=>x.published).length;
@@ -1300,7 +1301,12 @@ async function upload(files){
       try{
         const fd=new FormData();fd.append('file',file);
         const response=await fetch('/api/manage/upload',{method:'POST',headers:authHeader(),body:fd,cache:'no-store'});
-        if(!response.ok){let body;try{body=await response.json();}catch{}throw Error(body?.error||'上传失败 HTTP '+response.status);}
+        if(!response.ok){let body;try{body=await response.json();}catch{}
+          const messages={MEDIA_KV_WRITE_LIMIT:'文件已到存储，但 KV 写入被额度或限流限制；尚未登记到素材库',MEDIA_KV_WRITE_FAILED:'文件已到存储，但素材目录登记失败',MEDIA_CATALOG_WRITE_FAILED:'文件记录已保存，但全库索引登记失败，可使用索引维护补录',MEDIA_LINK_WRITE_FAILED:'原文件已保存，但短链接登记失败'};
+          const known=Object.hasOwn(messages,body?.code||'')?messages[body.code]:null;
+          const recovery=known&&isSafeId(body?.recovery?.id)?'。请保存原文件恢复链接：'+publicFileUrl(body.recovery.id):'';
+          throw Error((known||body?.error||'上传失败 HTTP '+response.status)+recovery);
+        }
         const result=await response.json();if(!Array.isArray(result)||!result[0]?.src)throw Error('上传响应异常');
         if(result[0].record&&isSafeId(result[0].record.name))confirmed.push(normalize(result[0].record));
         good++;
@@ -1436,7 +1442,7 @@ $('tagForm').addEventListener('submit',saveTags);
 $('tagClose').addEventListener('click',()=>$('tagDialog').close());
 $('tagCancel').addEventListener('click',()=>$('tagDialog').close());
 $('albumFilter').addEventListener('change',render);
-$('order').addEventListener('change',render);
+$('order').addEventListener('change',()=>loadPage(true,{preserveSelection:true}));
 $('chips').addEventListener('click',e=>{const b=e.target.closest('[data-chip]');if(b)setChip(b.dataset.chip);});
 document.querySelectorAll('.nav').forEach(b=>b.addEventListener('click',()=>setChip(b.dataset.view)));
 $('selectPage').addEventListener('click',()=>{

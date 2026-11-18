@@ -16,6 +16,7 @@ export async function performUpload(context, options={}) {
     const { request, env } = context;
     if(cutoverReadOnly(env))return cutoverResponse();
 
+    let recoveryId=null,stage='upload';
     try {
         const authResponse = authenticateUploadRequest(request, env);
         if (authResponse) {
@@ -39,26 +40,35 @@ export async function performUpload(context, options={}) {
         const fileExtension = fileName.split('.').pop().toLowerCase();
 
         const longId = await provider.upload(env, uploadFile, { fileName, fileExtension });
+        recoveryId=longId;
         let shortId = null;
 
         const metadata=createDefaultMetadata(longId,{fileName,fileSize:uploadFile.size,provider:provider.key,...(studio?{aiPublished:false}:{})});
         // 将文件信息保存到 KV 存储
         if (env.img_url) {
+            stage='media_record';
             if (isShortUrlsEnabled(env)) {
                 shortId = await allocateShortId(env);
             }
 
             if(shortId)metadata.shortId=shortId;
             await putMetadata(env,longId,metadata);
+            stage='catalog';
             await indexStudioMedia(env,longId,metadata);
 
             if (shortId) {
+                stage='short_link';
                 await putShortLink(env, shortId, longId);
             }
         }
 
         return jsonResponse([{src:`/file/${shortId||longId}`,...(studio?{record:{name:longId,metadata:{...metadata,folderId:null,...(versioned?{metadataVersion:0}:{})}}}:{})}],{headers:{'Cache-Control':'no-store'}});
     } catch (error) {
+        if(recoveryId&&(options.studio||uploadAuthMode(env)!=='legacy')){
+            const limited=/(?:quota|daily|limit.{0,40}(?:put|write)|(?:put|write).{0,40}limit)/i.test(String(error.message));
+            const code=stage==='media_record'?(limited?'MEDIA_KV_WRITE_LIMIT':'MEDIA_KV_WRITE_FAILED'):stage==='catalog'?'MEDIA_CATALOG_WRITE_FAILED':'MEDIA_LINK_WRITE_FAILED';
+            return jsonResponse({error:'File reached storage, but library registration failed',code,recovery:{id:recoveryId,src:'/file/'+encodeURIComponent(recoveryId)}},{status:503,headers:{'Cache-Control':'no-store'}});
+        }
         if(options.studio||uploadAuthMode(env)!=='legacy')return jsonResponse({error:error instanceof StudioUploadError?error.message:'Upload failed; check storage configuration or retry later'},{status:error instanceof StudioUploadError?error.status:503,headers:{'Cache-Control':'no-store'}});
         return jsonResponse({ error: error.message }, { status: 500 });
     }
