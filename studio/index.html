@@ -196,21 +196,18 @@ body.working button[data-action]{opacity:.6}
 .catalog-dialog{width:95vw;max-width:min(1050px,95vw);max-height:90vh;overflow:auto}.catalog-form{padding:10px 24px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.catalog-form label{display:flex;flex-direction:column;gap:5px;font-size:13px;font-weight:600}.catalog-form input,.catalog-form select{min-width:0;width:100%;box-sizing:border-box}.catalog-form .catalog-descendants{flex-direction:row;align-items:center}.catalog-descendants input{width:auto}.catalog-summary{padding:15px 24px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;color:#63748f;font-size:13px}.catalog-summary span{flex:1}.catalog-results{padding:0 24px 22px;display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:14px}.catalog-result{content-visibility:auto;contain-intrinsic-size:auto 240px;position:relative;border:1px solid #e3e9f3;border-radius:16px;overflow:hidden}.catalog-result>input{position:absolute;left:10px;top:10px;z-index:1;width:18px;height:18px;cursor:pointer}.catalog-preview{width:100%;height:100%;border:0;box-shadow:none;background:white;text-align:left;display:flex;flex-direction:column;gap:7px;padding:12px}.catalog-preview img{width:100%;height:125px;object-fit:cover;border-radius:9px}.catalog-preview strong{overflow-wrap:anywhere}.catalog-preview .muted{font-size:12px}@media(max-width:700px){.catalog-form{grid-template-columns:1fr 1fr}.catalog-results{grid-template-columns:1fr 1fr}}
 .global-tag-confirm{display:flex;gap:8px;align-items:flex-start;font-size:13px}.global-tag-confirm input{width:auto!important;flex:none;margin-top:3px}.global-tag-rows{display:flex;flex-direction:column;gap:8px;max-height:35vh;overflow:auto}.global-tag-row{display:flex;gap:8px;align-items:center;border:1px solid #e3e9f3;border-radius:12px;padding:10px}.global-tag-row strong{flex:1;overflow-wrap:anywhere}.global-tag-row span{white-space:nowrap;color:#76859c;font-size:13px}.global-tag-row button{padding:7px 10px}.global-tag-rows+button{margin-top:10px}#tagManagerEdit{margin-top:14px}#tagManagerEdit input,#tagManagerEdit select{width:100%;box-sizing:border-box}@media(max-width:600px){.global-tag-row{flex-wrap:wrap}.global-tag-row strong{flex-basis:55%}}
 .grid{--virtual-card-height:260px;overflow-anchor:none}.grid.virtualized .tile{height:var(--virtual-card-height)}.grid.virtualized .details{height:73px;min-height:0}.grid-spacer{grid-column:1/-1;pointer-events:none}.grid .offscreen-focus{position:absolute!important;left:-10000px;top:0;width:1px!important;height:1px!important;overflow:hidden}@media(max-width:540px){.grid{--virtual-card-height:220px}.grid.virtualized .details{height:74px}}
-/* Gallery preferences share exact geometry with the virtual viewport. */
-.gallery-view{display:flex;align-items:center;flex-wrap:wrap;gap:16px;margin-top:18px;color:#72819a;font-size:12px}
-.gallery-fit{display:inline-flex;background:#f3f6fa;border:1px solid #e8edf4;border-radius:10px;padding:3px;gap:3px}
-.gallery-fit button{border:0;background:transparent;box-shadow:none;color:#7b899d;padding:7px 12px;font-size:12px;border-radius:7px}
-.gallery-fit button[aria-pressed="true"]{background:#fff;color:#3d5e98;box-shadow:0 1px 5px #334b7414}
-.gallery-size,.gallery-info{display:flex;align-items:center;gap:9px;white-space:nowrap}.gallery-size input{width:125px;min-height:24px;padding:0;accent-color:#5779b3}.gallery-size output{min-width:38px;font-variant-numeric:tabular-nums;color:#9aa6b8}.gallery-info input{width:15px;height:15px;accent-color:#5779b3}
-#grid{--thumb-min:200px;--gallery-media-height:198px;--gallery-details-height:44px;--virtual-card-height:244px;grid-template-columns:repeat(auto-fill,minmax(min(100%,var(--thumb-min)),1fr));gap:14px;margin-top:17px}
-#grid .tile{border-radius:13px;box-shadow:none;min-width:0;height:var(--virtual-card-height)}
-#grid .media{height:var(--gallery-media-height);background:#f4f5f7}
-#grid[data-fit="contain"] .media img,#grid[data-fit="contain"] .media video{object-fit:contain}
-#grid[data-fit="cover"] .media img,#grid[data-fit="cover"] .media video{object-fit:cover}
-#grid .details{height:var(--gallery-details-height);min-height:0;padding:0 11px;display:flex;flex-direction:column;justify-content:center}
-#grid .filename{font-size:12px;font-weight:600}#grid .sub{margin-top:5px}
-#grid[data-info="compact"] .sub{display:none}
-@media(max-width:540px){.gallery-view{gap:10px 14px}.gallery-size input{width:90px}#grid{gap:11px}.gallery-info{margin-left:0}}
+/* Aspect-preserving justified gallery; filenames appear on hover/focus. */
+.gallery-view{display:flex;align-items:center;flex-wrap:wrap;gap:18px;margin-top:18px;color:#72819a;font-size:12px}
+.gallery-mode{color:#526a91;font-weight:600}.gallery-size,.gallery-info{display:flex;align-items:center;gap:9px;white-space:nowrap}.gallery-size input{width:125px;min-height:24px;padding:0;accent-color:#5779b3}.gallery-size output{min-width:38px;font-variant-numeric:tabular-nums;color:#9aa6b8}.gallery-info input{width:15px;height:15px;accent-color:#5779b3}
+#grid{display:block;position:relative;margin-top:16px;overflow-anchor:none}
+#grid .tile{position:absolute;min-width:0;border:0;border-radius:7px;box-shadow:none;background:#f4f5f7;height:var(--tile-height);overflow:hidden}
+#grid .tile:hover{box-shadow:none}#grid .tile.picked{outline:3px solid #7794cc;outline-offset:-3px}
+#grid .media{height:var(--tile-height);background:#f4f5f7}#grid .media img,#grid .media video{object-fit:contain}
+#grid .details,#grid.virtualized .details{position:absolute;bottom:0;left:0;right:0;height:auto;min-height:0;padding:22px 10px 9px;background:linear-gradient(transparent,rgba(19,31,48,.77));opacity:0;pointer-events:none;transition:opacity .15s}
+#grid .filename{font-size:12px;font-weight:500;color:white}#grid .sub{font-size:10px;margin-top:4px;color:#e0e7f1}
+#grid .tile:hover .details,#grid .tile:focus-within .details,#grid .tile.picked .details,#grid[data-info="detailed"] .details{opacity:1}
+#grid[data-info="compact"] .sub{display:none}#grid .tags{bottom:auto;top:12px;right:10px}
+@media(hover:none){#grid .details{opacity:1}}@media(max-width:540px){.gallery-view{gap:10px 14px}.gallery-size input{width:90px}}
 </style>
 </head>
 <body>
@@ -267,9 +264,9 @@ body.working button[data-action]{opacity:.6}
 <div class="filterbar"><div class="toolbar" id="chips"><button data-chip="all" class="chip on">全部</button><button data-chip="image" class="chip">图片</button><button data-chip="video" class="chip">视频</button><button data-chip="favorites" class="chip">收藏</button><button data-chip="published" class="chip">AI 已发布</button></div><span class="muted" id="selectedInfo">未选择</span></div>
 <div id="bulkbar" class="bulkbar hidden"><span class="count" id="selectedCount">已选择 0 项</span><button data-action="favorite">♡ 收藏</button><button data-action="unfavorite">取消收藏</button><button data-action="add_tags">＋ 标签</button><button data-action="remove_tags">－ 标签</button><button data-action="move_folder">▤ 移入相册</button><button data-action="clear_folder">移出相册</button><button data-action="set_category">分类</button><button data-action="publish">✧ 发布 AI</button><button data-action="unpublish">撤销 AI 发布</button><button id="exportSelected" type="button">下载 / 导出</button><button id="clearSelection">清除选择</button></div>
 <div class="gallery-view" role="group" aria-label="图片展示设置">
-<div class="gallery-fit" role="group" aria-label="图片适应方式"><button type="button" id="galleryContain" aria-pressed="true">完整图</button><button type="button" id="galleryCover" aria-pressed="false">填满</button></div>
+<span class="gallery-mode">自适应拼贴 · 原图比例</span>
 <label class="gallery-size" for="gallerySize">缩略图大小 <input id="gallerySize" type="range" min="140" max="320" step="20" value="200"><output id="gallerySizeValue" for="gallerySize">200</output></label>
-<label class="gallery-info"><input id="galleryInfo" type="checkbox">详细信息</label>
+<label class="gallery-info"><input id="galleryInfo" type="checkbox">常显图片信息</label>
 </div>
 <div id="grid" class="grid" aria-live="polite"></div>
 <div class="bottom-actions">
@@ -354,7 +351,7 @@ body.working button[data-action]{opacity:.6}
 </form></dialog>
 <dialog id="preview"><div class="modalhead"><strong>素材详情</strong><button class="close" id="closePreview">✕</button></div><div class="modalbody"><div id="previewMedia"></div><div class="modalinfo" id="previewInfo"></div></div></dialog>
 <div id="toast" class="toast" role="status"></div>
-<script src="/studio/grid-window.js"></script>
+<script src="/studio/justified-layout.js"></script>
 <script src="/studio/gallery-view.js"></script>
 <script src="/studio/export-utils.js"></script>
 <script>
@@ -731,48 +728,43 @@ function updateSelectionUI(matches){
   }
 }
 const galleryPreferences=StudioGallery.read(window);
-const mediaViewport={items:[],key:null,frame:null,metrics:null,width:0};
-function applyGalleryView(preservePosition=false){
-  const grid=$('grid'),old=mediaViewport.metrics,top=grid.getBoundingClientRect().top;
-  const anchor=preservePosition&&old&&top<0?Math.floor(-top/(old.height+old.gap))*old.columns:null;
-  grid.style.setProperty('--thumb-min',galleryPreferences.size+'px');
-  grid.style.setProperty('--gallery-details-height',galleryPreferences.info?'72px':'44px');
-  grid.dataset.fit=galleryPreferences.fit;grid.dataset.info=galleryPreferences.info?'detailed':'compact';
-  $('galleryContain').setAttribute('aria-pressed',String(galleryPreferences.fit==='contain'));
-  $('galleryCover').setAttribute('aria-pressed',String(galleryPreferences.fit==='cover'));
+const mediaViewport={items:[],key:null,frame:null,geometry:null,width:0,ratios:new Map(),revision:0,layoutRevision:-1,layoutItems:null,size:0};
+function applyGalleryView(){
+  $('grid').dataset.info=galleryPreferences.info?'detailed':'compact';
   $('gallerySize').value=galleryPreferences.size;$('gallerySizeValue').value=galleryPreferences.size+' px';
   $('galleryInfo').checked=galleryPreferences.info;
-  mediaViewport.metrics=null;mediaViewport.key=null;
-  if(anchor!==null&&mediaViewport.items.length>200){const next=gridMetrics();window.scrollTo({top:Math.max(0,window.scrollY+top+Math.floor(anchor/next.columns)*(next.height+next.gap)),behavior:'instant'});}
-  paintMediaWindow(true);
+  mediaViewport.size=0;mediaViewport.key=null;paintMediaWindow(true);
 }
-function saveGalleryView(){StudioGallery.save(window,galleryPreferences);applyGalleryView(true);}
-
-function gridMetrics(){
-  const grid=$('grid');if(!mediaViewport.metrics||mediaViewport.width!==grid.clientWidth){
-    const style=getComputedStyle(grid);mediaViewport.width=grid.clientWidth;
-    const tracks=style.gridTemplateColumns.split(' ').filter(Boolean);
-    const mediaHeight=Math.max(1,(parseFloat(tracks[0])||grid.clientWidth)-2);
-    const height=mediaHeight+(galleryPreferences.info?72:44)+2;
-    grid.style.setProperty('--gallery-media-height',mediaHeight+'px');grid.style.setProperty('--virtual-card-height',height+'px');
-    mediaViewport.metrics={columns:Math.max(1,tracks.length),height,gap:parseFloat(style.rowGap)||0};
-  }return mediaViewport.metrics;
+function saveGalleryView(){StudioGallery.save(window,galleryPreferences);applyGalleryView();}
+function galleryGeometry(){
+  const grid=$('grid'),width=grid.clientWidth;
+  if(!mediaViewport.geometry||mediaViewport.width!==width||mediaViewport.layoutItems!==mediaViewport.items||mediaViewport.size!==galleryPreferences.size||mediaViewport.layoutRevision!==mediaViewport.revision){
+    mediaViewport.geometry=StudioJustified.layout(mediaViewport.items.map(x=>mediaViewport.ratios.get(x.id)||1),width,galleryPreferences.size,8);
+    mediaViewport.width=width;mediaViewport.layoutItems=mediaViewport.items;mediaViewport.size=galleryPreferences.size;mediaViewport.layoutRevision=mediaViewport.revision;
+  }
+  return mediaViewport.geometry;
 }
 function paintMediaWindow(force=false){
   const grid=$('grid'),list=mediaViewport.items;if(!list.length)return;
-  const virtual=list.length>200,metrics=gridMetrics(),rect=grid.getBoundingClientRect();
-  const range=virtual?StudioGrid.range({count:list.length,...metrics,top:rect.top,viewport:window.innerHeight}):{start:0,end:list.length,before:0,after:0};
-  const key=[virtual,range.start,range.end,metrics.columns,metrics.height].join(':');if(!force&&key===mediaViewport.key)return;mediaViewport.key=key;
+  const previous=mediaViewport.geometry,previousItems=mediaViewport.layoutItems,geometry=galleryGeometry(),virtual=list.length>200;
+  let rect=grid.getBoundingClientRect();
+  grid.style.height=geometry.height+'px';
+  if(previous&&previousItems===list&&previous!==geometry&&rect.top<0&&previous.boxes.length===geometry.boxes.length){
+    const anchor=StudioJustified.visible(previous,rect.top,window.innerHeight,0).start;
+    const delta=geometry.boxes[anchor].top-previous.boxes[anchor].top;
+    if(delta){window.scrollTo({top:Math.max(0,window.scrollY+delta),behavior:'instant'});rect=grid.getBoundingClientRect();}
+  }
+  const range=virtual?StudioJustified.visible(geometry,rect.top,window.innerHeight):{start:0,end:list.length};
+  const key=[range.start,range.end,mediaViewport.width,galleryPreferences.size,mediaViewport.revision].join(':');if(!force&&key===mediaViewport.key)return;mediaViewport.key=key;
+  grid.style.height=geometry.height+'px';
   const active=document.activeElement,focused=grid.contains(active)?active.closest('.tile'):null;
   const frag=document.createDocumentFragment(),visible=new Set();
-  const spacer=height=>{const div=elt('div','grid-spacer');div.style.height=height+'px';div.setAttribute('aria-hidden','true');return div;};
-  if(range.before)frag.append(spacer(range.before));
   for(let i=range.start;i<range.end;i++){
-    const x=list[i];visible.add(x.id);let tile=state.tiles.get(x.id);
+    const x=list[i],box=geometry.boxes[i];visible.add(x.id);let tile=state.tiles.get(x.id);
     if(!tile)tile=createTile(x);else state.tiles.delete(x.id);state.tiles.set(x.id,tile);
-    tile.classList.remove('offscreen-focus');tile.tabIndex=0;tile._check.tabIndex=0;for(const button of tile.querySelectorAll('button'))button.tabIndex=0;refreshTile(tile,x);tile._check.checked=state.selected.has(x.id);tile.classList.toggle('picked',tile._check.checked);tile.setAttribute('aria-posinset',String(i+1));tile.setAttribute('aria-setsize',String(list.length));frag.append(tile);
+    tile.classList.remove('offscreen-focus');tile.style.left=box.left+'px';tile.style.top=box.top+'px';tile.style.width=box.width+'px';tile.style.setProperty('--tile-height',box.height+'px');
+    tile.tabIndex=0;tile._check.tabIndex=0;for(const button of tile.querySelectorAll('button'))button.tabIndex=0;refreshTile(tile,x);tile._check.checked=state.selected.has(x.id);tile.classList.toggle('picked',tile._check.checked);tile.setAttribute('aria-posinset',String(i+1));tile.setAttribute('aria-setsize',String(list.length));frag.append(tile);
   }
-  if(range.after)frag.append(spacer(range.after));
   if(focused&&!visible.has(focused.dataset.mediaId)&&list.some(x=>x.id===focused.dataset.mediaId)){focused.classList.add('offscreen-focus');focused.tabIndex=-1;for(const child of focused.querySelectorAll('input,button'))child.tabIndex=-1;visible.add(focused.dataset.mediaId);frag.append(focused);}
   grid.classList.toggle('virtualized',virtual);grid.setAttribute('aria-live',virtual?'off':'polite');grid.replaceChildren(frag);
   if(active&&grid.contains(active))active.focus({preventScroll:true});
@@ -783,9 +775,9 @@ function scheduleMediaWindow(){
 }
 function navigateMedia(id,key){
   const list=mediaViewport.items,index=list.findIndex(x=>x.id===id);if(index<0)return false;
-  const metrics=gridMetrics(),next=StudioGrid.target(index,key,metrics.columns,list.length);if(next===null)return false;
+  const geometry=galleryGeometry(),next=StudioJustified.target(index,key,geometry);if(next===null)return false;
   const item=list[next],grid=$('grid');
-  if(list.length>200){const y=grid.getBoundingClientRect().top+window.scrollY+Math.floor(next/metrics.columns)*(metrics.height+metrics.gap);window.scrollTo({top:Math.max(0,y-window.innerHeight/4),behavior:'instant'});paintMediaWindow(true);}
+  if(list.length>200){window.scrollTo({top:Math.max(0,grid.getBoundingClientRect().top+window.scrollY+geometry.boxes[next].top-window.innerHeight/4),behavior:'instant'});paintMediaWindow(true);}
   state.tiles.get(item.id)?.focus({preventScroll:list.length>200});return true;
 }
 function createTile(x){
@@ -793,6 +785,10 @@ function createTile(x){
   const media=elt('div','media');
   if(x.type==='image'){
     const img=elt('img');img.alt='';img.loading='lazy';img.decoding='async';img.fetchPriority='low';
+    img.addEventListener('load',()=>{
+      const ratio=img.naturalWidth/img.naturalHeight;
+      if(Number.isFinite(ratio)&&ratio>0&&mediaViewport.ratios.get(x.id)!==ratio){mediaViewport.ratios.set(x.id,ratio);mediaViewport.revision++;scheduleMediaWindow();}
+    });
     img.src=fileUrl(x.id);
     const fallback=elt('div','broken hidden');
     fallback.append(elt('span','broken-icon','⚠'),elt('span','broken-label','图片暂时无法加载'));
@@ -850,7 +846,7 @@ function render(){
   $('loadMore').classList.toggle('hidden',state.complete);
   $('selectAllMatched').classList.toggle('hidden',state.complete);
   if(!list.length){
-    mediaViewport.items=[];mediaViewport.key=null;state.tiles.clear();grid.classList.remove('virtualized');grid.setAttribute('aria-live','polite');
+    mediaViewport.items=[];mediaViewport.key=null;state.tiles.clear();grid.classList.remove('virtualized');grid.style.height='';mediaViewport.geometry=null;grid.setAttribute('aria-live','polite');
     grid.replaceChildren(elt('div','empty',folderById(state.folderSelection)&&folderChildren(state.folderSelection).length&&!state.includeDescendants?'当前相册没有直接存放的素材。可以打开上面的子文件夹，或者开启「包含子文件夹素材」。':'没有匹配的素材。请调整搜索或筛选条件。'));
     updateSelectionUI(list);return;
   }
@@ -1368,14 +1364,12 @@ $('folderMoveSave').addEventListener('click',async()=>{
   await runAction('move_folder',{folderId});
 });
 $('reload').addEventListener('click',()=>loadPage(true));
-$('galleryContain').addEventListener('click',()=>{galleryPreferences.fit='contain';saveGalleryView();});
-$('galleryCover').addEventListener('click',()=>{galleryPreferences.fit='cover';saveGalleryView();});
 $('gallerySize').addEventListener('input',e=>{galleryPreferences.size=Number(e.target.value);saveGalleryView();});
 $('galleryInfo').addEventListener('change',e=>{galleryPreferences.info=e.target.checked;saveGalleryView();});
 applyGalleryView();
 window.addEventListener('scroll',scheduleMediaWindow,{passive:true});
-window.addEventListener('resize',()=>{mediaViewport.metrics=null;scheduleMediaWindow();});
-if(typeof ResizeObserver!=='undefined')new ResizeObserver(()=>{mediaViewport.metrics=null;scheduleMediaWindow();}).observe($('grid'));
+window.addEventListener('resize',scheduleMediaWindow);
+if(typeof ResizeObserver!=='undefined')new ResizeObserver(scheduleMediaWindow).observe($('grid'));
 let searchTimer; $('search').addEventListener('input',()=>{clearTimeout(searchTimer);searchTimer=setTimeout(render,110);});
 $('tagFilter').addEventListener('change',render);
 $('tagSearch').addEventListener('input',renderTagChoices);
