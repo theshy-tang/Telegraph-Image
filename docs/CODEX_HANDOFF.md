@@ -343,3 +343,10 @@ Codex 能回答以下问题才算完成接手：它知道当前分支/PR 与 Pro
 - Slider now controls target row height; removed contain/cover mode buttons. Filenames overlay on hover/focus/selection, always visible on touch; optional always-visible information. Persist only size/info, safely reading older preference objects.
 - Natural image dimensions update an in-memory ratio map on load and coalesce relayout by animation frame. Unknown ratios temporarily use 1:1; no separate full-library dimension scan or downloads. Row geometry drives virtual viewport, container height and keyboard navigation; selection remains independent. Preserve visible-row anchor on ratio/width changes when the result list is unchanged. Videos retain placeholders.
 - Geometry acceptance uses100 mixed-aspect fixtures as requested; 3 new justified-layout regressions cover aspect preservation, no overlap, ordered/full rows, final row, viewport, navigation and extreme ratios. Relevant suite10 passes plus inline JS syntax/diff checks. Browser visual/interaction acceptance remains unverified due managed preview routing failure already documented; do not claim screenshots or live interaction proof. No production branch, credentials, real data or original links changed.
+
+
+## 2026-11-18 warm paper palette
+
+- Owner accepted the recommended warm paper/sage palette. Added studio/theme-paper.css after existing styles, covering page/sidebar/cards/forms/folders/chips/selection/bulk/dialog/inspector consistently; no layout or data changes. No extra theme picker added.
+- Tokens: page #F2F0EB, surface #FAF9F6, text #343A38, muted #646E68, accent #617B70, primary #4F695D. Reduced surface gradients/shadows and strengthened small text; media has neutral background and no color filter. Pure luminance calculations: body/surface 11.03:1, white/primary 5.98:1. This is not a medical eye-protection claim or a browser visual acceptance result.
+- Local QA server serves the stylesheet with text/css. No new behavioral tests for this reversible appearance-only edit. CSS syntax/diff and deployed stylesheet HTTP checks used; earlier browser preview routing limitation remains. Preview only, Production and Draft PR status preserved.
