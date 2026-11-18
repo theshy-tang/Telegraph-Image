@@ -46,3 +46,12 @@ Actual deployment and migration verification are recorded below. Production cred
 - Public file reads previously wrote KV even when no moderation result changed. A rejected write could discard a successfully fetched image and produce HTTP 500. Removed redundant writes and isolated read-through/verdict persistence failures. HEAD remains read-only; stored blocks/whitelist and newly detected adult verdicts still apply. Full stored metadata is preserved when a changed verdict is saved.
 - At inspection source KV had 578 records. Three screenshot-matched samples returned 500 before release, with one existing admin-path control returning 200. Following release, the same three HEAD samples returned 200 image/jpeg. Ordinary GET checks also returned 200; bodies cancelled, no raw media exported or decoded. Exact remote quota/error message was not obtained; temporary failed tail session removed.
 - No data migration/deletion, credentials, bindings or environment changes. This is a code-only reliability patch.
+
+
+## 2026-11-18 owner-authorized gallery/theme/wallpaper release
+
+- Source 7469c21cad5fcbdff933bffa7123830eb22466bb (successful Preview a9c64103), released to the existing fixed Production branch by expected-SHA lease. Production deployment ca1e1b4a-2aae-4f4c-aa67-122fd3858c37 succeeded and is canonical. Main and Draft PR remain unmerged.
+- Includes original-ratio justified image rows, warm paper/sage theme and native library image/video wallpapers. Changes since prior Production are confined to Studio frontend, QA helpers/tests and documents. No backend function/schema changes, migration, KV/D1 edits, credential changes or binding changes. Existing D1 authority and admin-only upload remain enabled.
+- Re-ran 16 focused preference/layout/wallpaper regressions, all passed. Canonical Studio and four changed supporting assets return200. Config returns200 with uploadRequiresAuth true and no read-only header; anonymous management/list and upload both401. Actual video codec/playback is still dependent on browser and selected file; no new real-media mutation or browser-authenticated playback claim.
+- Code rollback target is previous successful Production 267a0a32-b4bf-4bb2-a488-9d7953aeb4bf / 0da2c32, which preserves the same D1-capable backend. Preserve Production data and bindings on rollback.
+- Wallpaper settings persist only per browser/origin; Preview preferences do not automatically transfer to Production. Development documentation commits remain Preview-only.
