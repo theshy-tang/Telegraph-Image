@@ -2,11 +2,11 @@ const assert=require('assert');const fs=require('fs');const path=require('path')
 const page=fs.readFileSync(path.join(__dirname,'../studio/index.html'),'utf8');
 const fn=page.slice(page.indexOf('async function upload(files){'),page.indexOf("\nlet wallpaperConfig=",page.indexOf('async function upload(files){')));
 describe('Studio upload UI integration',function(){
- function harness(fetch){
-  const state={busy:false,seen:new Set(),items:[]};const elements={uploadBtn:{disabled:false},status:{textContent:''}};
-  const upload=new Function('state','$','fetch','authHeader','IS_PREVIEW','confirm','setBusyUI','loadPage','normalize','isSafeId','render','renderFolders','toast','publicFileUrl',fn+';return upload;')(
-   state,id=>elements[id],fetch,()=>({Authorization:'Basic fixture-only'}),false,()=>true,()=>{},async()=>{assert.strictEqual(state.busy,false);state.items=[];state.seen.clear();},record=>({id:record.name}),()=>true,()=>{},()=>{},()=>{},id=>'/file/'+encodeURIComponent(id));
-  return {state,elements,upload};
+ function harness(fetch,refresh){
+  const feedback=[];const state={busy:false,seen:new Set(),items:[]};const elements={uploadBtn:{disabled:false},status:{textContent:''}};
+  const upload=new Function('state','$','fetch','authHeader','IS_PREVIEW','confirm','setBusyUI','loadPage','normalize','isSafeId','render','renderFolders','toast','publicFileUrl','showUploadFeedback',fn+';return upload;')(
+   state,id=>elements[id],fetch,()=>({Authorization:'Basic fixture-only'}),false,()=>true,()=>{},(refresh||(async()=>{assert.strictEqual(state.busy,false);state.items=[];state.seen.clear();})),record=>({id:record.name}),()=>true,()=>{},()=>{},()=>{},id=>'/file/'+encodeURIComponent(id),message=>feedback.push(message));
+  return {state,elements,upload,feedback};
  }
  it('sends admin auth and retains server-confirmed uploads when the KV list is stale',async()=>{
   const h=harness(async(url,options)=>{assert.strictEqual(url,'/api/manage/upload');assert.strictEqual(options.headers.Authorization,'Basic fixture-only');assert.ok(options.body.get('file'));return Response.json([{src:'/file/sample.png',record:{name:'sample.png'}}]);});
@@ -20,7 +20,13 @@ describe('Studio upload UI integration',function(){
  });
  it('keeps a safe original link in failed-registration feedback without claiming upload success',async()=>{
   const h=harness(async()=>Response.json({error:'registration failed',code:'MEDIA_KV_WRITE_LIMIT',recovery:{id:'sample.png',src:'https://untrusted.invalid'}},{status:503}));
-  await h.upload([new File(['a'],'sample.png')]);assert.ok(h.elements.status.textContent.includes('/file/sample.png'));assert.ok(h.elements.status.textContent.includes('失败 1'));assert.ok(!h.elements.status.textContent.includes('untrusted.invalid'));assert.deepStrictEqual(h.state.items,[]);
+  await h.upload([new File(['a'],'sample.png')]);assert.ok(h.elements.status.textContent.includes('/file/sample.png'));assert.ok(h.elements.status.textContent.includes('未确认 1'));assert.ok(!h.elements.status.textContent.includes('untrusted.invalid'));assert.deepStrictEqual(h.state.items,[]);
+ });
+
+ it('publishes the final result before a stalled list refresh and marks an aborted request unknown',async()=>{
+  let finish;const refreshed=new Promise(r=>finish=r);const h=harness(async()=>{throw Object.assign(Error('aborted'),{name:'AbortError'})},()=>refreshed);
+  const pending=h.upload([new File(['a'],'sample.png')]);for(let i=0;i<5;i++)await Promise.resolve();
+  assert.ok(h.feedback[0].includes('准备上传'));assert.ok(h.feedback.some(x=>x.includes('结果未知')));finish();await pending;
  });
 
 });
