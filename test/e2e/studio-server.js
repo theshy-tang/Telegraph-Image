@@ -21,6 +21,7 @@ const {createStudioDB}=require('../studio-runtime');const {createMockKV}=require
  const collection=await import('../../functions/api/manage/folders.js');const detail=await import('../../functions/api/manage/folders/[id].js');
  const upload=await import('../../functions/api/manage/upload.js');
  const bulk=await import('../../functions/api/manage/bulk.js');const list=await import('../../functions/api/manage/list.js');const media=await import('../../functions/api/manage/media/[id].js');
+ const recover=await import('../../functions/api/manage/recover-upload.js');const recordSync=await import('../../functions/api/manage/record-sync.js');
  const server=http.createServer(async(req,res)=>{
   try{
    const url=new URL(req.url,'http://127.0.0.1:'+port);
@@ -31,7 +32,9 @@ const {createStudioDB}=require('../studio-runtime');const {createMockKV}=require
    const chunks=[];for await(const chunk of req)chunks.push(chunk);
    const request=new Request(url,{method:req.method,headers:req.headers,...(!['GET','HEAD'].includes(req.method)?{body:Buffer.concat(chunks)}:{})});
    const id=decodeURIComponent(url.pathname.split('/').pop());let handler;
-   if(url.pathname==='/api/manage/catalog-sync')handler=req.method==='GET'?sync.onRequestGet:sync.onRequestPost;
+   if(url.pathname==='/api/manage/recover-upload')handler=recover.onRequestPost;
+   else if(url.pathname==='/api/manage/record-sync')handler=recordSync.onRequestPost;
+   else if(url.pathname==='/api/manage/catalog-sync')handler=req.method==='GET'?sync.onRequestGet:sync.onRequestPost;
    else if(url.pathname==='/api/manage/export')handler=exported.onRequestPost;
    else if(url.pathname.startsWith('/api/manage/download/'))handler=download.onRequestGet;
    else if(url.pathname==='/api/manage/tags')handler=req.method==='GET'?tags.onRequestGet:tags.onRequestPost;

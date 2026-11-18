@@ -242,7 +242,7 @@ body.working button[data-action]{opacity:.6}
 <main>
 <div class="top">
 <div><h1 id="pageTitle">全部素材</h1><div class="muted">管理你的图片、视频、私人收藏和工作素材</div></div>
-<div class="toolbar"><button id="wallpaperOpen" type="button" class="ghost">背景设置</button><button id="wallpaperMotion" type="button" class="ghost hidden">暂停背景</button><button id="reload" class="ghost">↻ 刷新</button><button id="uploadBtn" class="primary">↑ 上传素材</button><input id="fileInput" type="file" accept="image/*,video/*" multiple class="hidden"></div>
+<div class="toolbar"><button id="recoverUploadOpen" type="button" class="ghost" disabled>补录上传</button><button id="wallpaperOpen" type="button" class="ghost">背景设置</button><button id="wallpaperMotion" type="button" class="ghost hidden">暂停背景</button><button id="reload" class="ghost">↻ 刷新</button><button id="uploadBtn" class="primary">↑ 上传素材</button><input id="fileInput" type="file" accept="image/*,video/*" multiple class="hidden"></div>
 </div>
 <section id="uploadFeedback" class="upload-feedback hidden" aria-label="上传进度与结果" role="status" aria-live="polite"><div><strong>上传任务</strong><div id="uploadFeedbackMessage" class="upload-feedback-message"></div></div><button type="button" id="uploadFeedbackClose" class="ghost" aria-label="收起上传结果">收起</button></section>
 <div class="stats">
@@ -355,6 +355,17 @@ body.working button[data-action]{opacity:.6}
 <div class="folder-dialog-actions"><button type="button" class="ghost" id="tagCancel">取消</button><button type="submit" class="primary" id="tagSave">应用标签</button></div>
 </form></dialog>
 <dialog id="preview"><div class="modalhead"><strong>素材详情</strong><button class="close" id="closePreview">✕</button></div><div class="modalbody"><div id="previewMedia"></div><div class="modalinfo" id="previewInfo"></div></div></dialog>
+<dialog id="recoverUploadDialog" class="wallpaper-dialog" aria-labelledby="recoverUploadTitle">
+<div class="modalhead"><strong id="recoverUploadTitle">补录已存储的文件</strong><button type="button" class="close" id="recoverUploadClose" aria-label="关闭补录">✕</button></div>
+<form id="recoverUploadForm"><div class="wallpaper-fields">
+<label>原文件恢复链接<input id="recoverUploadLink" class="search" maxlength="2048" required placeholder="粘贴上传失败时的 /file/ 恢复链接"></label>
+<label>显示文件名<input id="recoverUploadName" class="search" maxlength="200" required placeholder="例如 wallpaper.png"></label>
+<label class="global-tag-confirm"><input id="recoverUploadConfirm" type="checkbox" required>确认补录这一个文件，不重新上传、不修改原始链接。</label>
+<p class="wallpaper-help">服务器只检查原链接的响应头。记录先保存到 D1；KV 不可写时会保留待同步状态。无法通过本工具恢复已删除的记录。</p>
+<div id="recoverUploadStatus" class="wallpaper-status" role="status"></div>
+<button id="recordSync" type="button" class="ghost">重试旧版 KV 目录同步（最多 10 条）</button>
+</div><div class="wallpaper-actions"><button id="recoverUploadSubmit" type="submit" class="primary">确认补录</button></div></form>
+</dialog>
 <dialog id="wallpaperDialog" class="wallpaper-dialog" aria-labelledby="wallpaperTitle">
 <div class="modalhead"><strong id="wallpaperTitle">背景设置</strong><button type="button" class="close" id="wallpaperClose" aria-label="关闭背景设置">✕</button></div>
 <form id="wallpaperForm"><div class="wallpaper-fields">
@@ -1298,7 +1309,7 @@ async function upload(files){
   if(state.busy||!files?.length||IS_PREVIEW)return;
   if(!confirm('上传 '+files.length+' 个文件到图床？新素材不会自动收藏或发布给 AI。'))return;
   state.busy=true;setBusyUI(true);$('uploadBtn').disabled=true;
-  let good=0,failed=0;const confirmed=[],errors=[];
+  let good=0,failed=0;const confirmed=[],errors=[],warnings=[];
   showUploadFeedback('准备上传 '+files.length+' 个文件。正在等待服务器确认，请勿重复上传。');
   try{
     for(const file of files){
@@ -1308,20 +1319,21 @@ async function upload(files){
         const fd=new FormData();fd.append('file',file);
         const response=await fetch('/api/manage/upload',{method:'POST',headers:authHeader(),body:fd,cache:'no-store',signal:controller.signal});
         if(!response.ok){let body;try{body=await response.json();}catch{}
-          const messages={MEDIA_KV_WRITE_LIMIT:'文件已到存储，但 KV 写入被额度或限流限制；尚未登记到素材库',MEDIA_KV_WRITE_FAILED:'文件已到存储，但素材目录登记失败',MEDIA_CATALOG_WRITE_FAILED:'文件记录已保存，但全库索引登记失败，可使用索引维护补录',MEDIA_LINK_WRITE_FAILED:'原文件已保存，但短链接登记失败'};
+          const messages={MEDIA_D1_REGISTER_FAILED:'文件已到存储，但 D1 登记失败，请保存恢复链接',MEDIA_KV_WRITE_LIMIT:'文件已到存储，但 KV 写入被额度或限流限制；尚未登记到素材库',MEDIA_KV_WRITE_FAILED:'文件已到存储，但素材目录登记失败',MEDIA_CATALOG_WRITE_FAILED:'文件记录已保存，但全库索引登记失败，可使用索引维护补录',MEDIA_LINK_WRITE_FAILED:'原文件已保存，但短链接登记失败'};
           const known=Object.hasOwn(messages,body?.code||'')?messages[body.code]:null;
           const recovery=known&&isSafeId(body?.recovery?.id)?'。请保存原文件恢复链接：'+publicFileUrl(body.recovery.id):'';
           throw Error((known||body?.error||'上传失败 HTTP '+response.status)+recovery);
         }
         const result=await response.json();if(!Array.isArray(result)||!result[0]?.src)throw Error('上传响应异常');
         if(result[0].record&&isSafeId(result[0].record.name))confirmed.push(normalize(result[0].record));
+        if(result[0].registration?.kvPending)warnings.push(file.name+'：已保存到 D1，旧版 KV 目录待同步。');
         good++;
       }catch(error){failed++;errors.push(file.name+'：'+(error.name==='AbortError'?'服务器未在120秒内确认，结果未知。请刷新检查，勿立即重复上传。':error.message));}
       finally{clearTimeout(timer);}
       $('status').textContent='上传进度 '+(good+failed)+' / '+files.length;
     }
   }finally{state.busy=false;setBusyUI(false);$('uploadBtn').disabled=IS_PREVIEW;}
-  const summary='上传处理结束：成功 '+good+' 项，失败或未确认 '+failed+' 项。'+(good?'新素材位于未归类。':'')+(errors.length?'\n'+errors.slice(0,3).join('\n'):'');
+  const summary='上传处理结束：成功 '+good+' 项，失败或未确认 '+failed+' 项。'+(good?'新素材位于未归类。':'')+(errors.length?'\n'+errors.slice(0,3).join('\n'):'')+(warnings.length?'\n'+warnings.slice(0,3).join('\n'):'');
   showUploadFeedback(summary);toast('上传成功 '+good+'，失败或未确认 '+failed);
   await loadPage(true);
   // A newly uploaded KV key may not be visible in list() yet. Keep only
@@ -1347,6 +1359,28 @@ function wallpaperChoices(){
   select.value=chosen;$('wallpaperOptions').classList.toggle('hidden',type==='default');
   $('wallpaperMore').classList.toggle('hidden',state.complete);$('wallpaperMore').disabled=state.busy;
 }
+$('recoverUploadOpen').addEventListener('click',()=>{$('recoverUploadStatus').textContent='';$('recoverUploadConfirm').checked=false;$('recoverUploadDialog').showModal();});
+$('recoverUploadClose').addEventListener('click',()=>$('recoverUploadDialog').close());
+$('recoverUploadForm').addEventListener('submit',async e=>{
+  e.preventDefault();if(!$('recoverUploadConfirm').checked)return;
+  let id=$('recoverUploadLink').value.trim();
+  if(!isSafeId(id)){
+    try{const u=new URL(id,location.origin);if(![location.origin,'https://my-image-bed.pages.dev'].includes(u.origin)||u.username||u.password||u.search||u.hash)throw Error();id=u.pathname.startsWith('/file/')?u.pathname.slice(6):'';}catch{id='';}
+  }
+  if(!isSafeId(id)){ $('recoverUploadStatus').textContent='请使用本站原文件恢复链接。';return;}
+  $('recoverUploadSubmit').disabled=true;$('recoverUploadStatus').textContent='正在检查链接并补录，请勿重复提交…';
+  try{const r=await api('/api/manage/recover-upload',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id,fileName:$('recoverUploadName').value,confirm:true})});
+    await loadPage(true);if(!state.seen.has(r.record.name)){state.seen.add(r.record.name);state.items.push(normalize(r.record));}selectFolder(r.record.metadata.folderId||'unfiled');render();
+    $('recoverUploadStatus').textContent=r.registration.kvPending?'已补录到 D1，可在新版图库使用；旧 KV 目录仍待同步。':'已补录，旧 KV 目录也已同步。';$('recoverUploadConfirm').checked=false;
+  }catch(error){$('recoverUploadStatus').textContent='补录未确认：'+error.message;}
+  finally{$('recoverUploadSubmit').disabled=false;}
+});
+$('recordSync').addEventListener('click',async()=>{
+  $('recordSync').disabled=true;
+  try{const r=await api('/api/manage/record-sync',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({confirm:true})});$('recoverUploadStatus').textContent='本次同步 '+r.synced+' 条；待同步 '+r.pending+' 条。'+(r.pending?'若 KV 仍受限，请稍后再试；无需重传文件。':'');}
+  catch(error){$('recoverUploadStatus').textContent=error.message;}
+  finally{$('recordSync').disabled=false;}
+});
 $('wallpaperOpen').addEventListener('click',()=>{
   wallpaperDraft={...wallpaperConfig};$('wallpaperType').value=wallpaperDraft.type;$('wallpaperSearch').value='';
   $('wallpaperMask').value=wallpaperDraft.mask;$('wallpaperMaskValue').value=wallpaperDraft.mask+'%';$('wallpaperSurface').value=wallpaperDraft.surface;$('wallpaperSurfaceValue').value=wallpaperDraft.surface+'%';
@@ -1390,7 +1424,7 @@ $('loginForm').addEventListener('submit',async e=>{
     catch{throw Error('后台返回的不是 JSON，请检查 Preview 的 KV 绑定和 Pages Functions。响应开头：'+body.slice(0,70));}
     if(!Array.isArray(json.keys))throw Error('图床后台返回的数据格式不正确，请检查 KV 配置。');
     $('globalSearchOpen').disabled=true;$('tagManagerOpen').disabled=true;$('indexMaintenanceOpen').disabled=true;
-    state.assetDetailsEnabled=Boolean(json.catalogReady);state.auth=candidate;$('pass').value='';$('auth').classList.add('hidden');$('app').classList.remove('hidden');if(IS_PREVIEW){$('uploadBtn').disabled=true;$('uploadBtn').title='预览环境仅同步正式图片目录，不允许上传，避免测试数据和真实 Telegram 存储混用';}await loadFolders();await loadPage();startWallpaper();$('globalSearchOpen').disabled=!json.catalogReady;$('tagManagerOpen').disabled=!json.catalogReady;$('indexMaintenanceOpen').disabled=!json.catalogReady;$('globalSearchOpen').title=json.catalogReady?'按全库索引检索，不必先加载所有页面':'当前环境的全库索引尚未启用';
+    $('recoverUploadOpen').disabled=!json.durableUploads;state.assetDetailsEnabled=Boolean(json.catalogReady);state.auth=candidate;$('pass').value='';$('auth').classList.add('hidden');$('app').classList.remove('hidden');if(IS_PREVIEW){$('uploadBtn').disabled=true;$('uploadBtn').title='预览环境仅同步正式图片目录，不允许上传，避免测试数据和真实 Telegram 存储混用';}await loadFolders();await loadPage();startWallpaper();$('globalSearchOpen').disabled=!json.catalogReady;$('tagManagerOpen').disabled=!json.catalogReady;$('indexMaintenanceOpen').disabled=!json.catalogReady;$('globalSearchOpen').title=json.catalogReady?'按全库索引检索，不必先加载所有页面':'当前环境的全库索引尚未启用';
   }catch(err){$('loginError').textContent=err.message;}
 });
 $('globalSearchOpen').addEventListener('click',openCatalog);

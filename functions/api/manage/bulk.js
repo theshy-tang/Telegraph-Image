@@ -1,3 +1,4 @@
+import {sourceRecord} from '../../utils/studio-records.js';
 import {parseAssetDetails,ASSET_FIELDS} from '../../utils/studio-asset-details.js';
 import {metadataD1Enabled,readStudioMetadata,mutateStudioMetadata} from '../../utils/studio-metadata.js';
 import {hasStudioD1,getStudioFolder,getStudioMediaFolders} from '../../utils/studio-d1.js';
@@ -149,7 +150,7 @@ export async function onRequestPost(context) {
         const i = position++;
         const id = ids[i];
         try {
-          const current = await env.img_url.getWithMetadata(id);
+          const current = await sourceRecord(env,id);
           if (!current || !current.metadata) {
             results[i] = { id, ok: false, error: 'File metadata not found' };
             continue;

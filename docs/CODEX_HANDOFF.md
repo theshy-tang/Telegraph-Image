@@ -385,3 +385,22 @@ Owner repeated one upload and saw another Telegram copy but no UI feedback. A re
 
 Owner explicitly replied 同意 to the new upload/list fix deployment request, resolving the earlier Production approval block. Production release branch advanced from7469c21 to769abc437d60181328572b0c062b946c4783f863. Deployment29e9a519-4231-4a5e-8447-22e2cd293d62 succeeded and is canonical. 33 relevant tests had passed on this exact code. KV/D1/metadata flag/admin upload settings are unchanged; no source data repair, paid plan change, test upload or Draft PR merge.
 Formal page contains ordered-list requests, persistent progress, timeout and staged recovery feedback. Unauthenticated ordered list/upload remain401; config ready/auth true. Previous missing upload remains unregistered: do NOT claim it recovered or that the exact original failure cause is proven. Owner can now try one file and preserve the specific result/recovery link; avoid repeated batch uploads.
+
+
+## 2026-11-18 KV 写入受限：D1 原始目录（开发分支，未正式发布）
+
+用户的失败反馈明确为 MEDIA_KV_WRITE_LIMIT：Telegram 已接收文件，但 KV 登记被额度或限流拒绝。尚未取得足够信息区分日额度与短期限流，不推断套餐，不修改计费。截图文件尚未补录，请保存原文件恢复链接，勿再次上传。
+
+新增 migrations/0005_media_studio_records.sql。开启 D1 元数据且此表存在、索引 ready 时，Studio 上传将原始目录、初始可编辑资料、全库索引放在一个 D1 原子批次中；提交成功后尝试镜像 KV。镜像失败仍可正常在新版图库查看、编辑、检索和导出，并显示“旧版 KV 目录待同步”。D1 登记失败仍返回原文件恢复链接。既有 KV 原记录不搬迁、不删除；旧 /upload 路径保持原 KV 流程，尚未迁到此模式。新 Studio 上传返回原始 /file/ID，不新建短链接。
+
+studio_media_records 仅持有新版上传或人工补录的原始目录。D1 可编辑资料、版本、删除标记和相册归属继续沿用现有表；旧 KV 不能覆盖这些资料。只读来源优先取这张源表，否则取 KV；审核结果对 D1 所有的记录保存回源表。描述、来源链接与提示词仍仅在受认证的编辑表中，不复制到源表/KV/公开目录。重传与补录不复活删除标记，不覆盖已有封禁或白名单。
+
+公开目录先逐页列出 KV 中非 D1 所有的记录，再以 records: 游标列出 D1 源表，避免 KV 同步后重复；保持显式 AI 发布、最新旧 KV 审核、D1 审核和删除标记检查。此工具不是全库固定快照。
+
+后台“补录上传”接收本站原始恢复链接、文件名和逐项确认。先对固定来源 /file/ID 发 HEAD（不带认证、不跟随重定向、不下载文件），验证媒体响应后登记，未存在的记录默认不收藏、不公开，登记时间为补录时刻，大小取 Content-Length，未知为0。已存在记录保持原资料。手动“重试旧版 KV 目录同步”每次最多10条，首个失败即停止，跳过删除标记，保留原 KV raw value。没有后台定时同步或自动批量补录。
+
+验证：77项相关回归通过，使用真实 Node SQLite 与隔离存储样例，覆盖所有 KV 写入失败、D1 原子回滚、读/改/导出/下载、恢复 HEAD、审核/公开、删除标记、旧值保留与去重。现有 Miniflare/workerd 的 /sys CPU 环境故障未解除，不能声称完整运行器或真实 Telegram 上传验收通过；浏览器预览路由也仍不可访问。
+
+仅独立 Preview D1 已执行0005建空表：前后索引均9条，源表0条，外键检查无异常；受删除标记保护的 upsert SQL 在远程 D1 EXPLAIN 解析成功。没有修改 Production 数据、表结构、环境绑定、密钥或套餐，没有修复截图文件。Production 仍769abc4。正式应用0005、发布新代码、补录这1条记录需本轮明确批准。
+
+回滚边界：存在 D1 原始目录后必须保留该源表读写适配器，不能直接回到769abc4或其他只从 KV 读取原始目录的旧版本。即使待同步数为0，也必须先核对全部源记录和删除/审核状态，并安排读写一致的迁移，不能仅凭 KV 镜像成功回退。

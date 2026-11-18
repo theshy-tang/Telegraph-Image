@@ -1,3 +1,4 @@
+import {overlaySourceRecords,recordsReady} from '../../utils/studio-records.js';
 import {onRequestGet as searchLibrary} from './search.js';
 import {catalogStatus} from '../../utils/studio-catalog.js';
 import {overlayStudioMetadata} from '../../utils/studio-metadata.js';
@@ -19,7 +20,7 @@ export async function onRequest(context) {
     for(const key of ['order','limit','cursor'])if(url.searchParams.has(key))search.searchParams.set(key,url.searchParams.get(key));
     const response=await searchLibrary({request:new Request(search,{headers:request.headers}),env});
     if(!response.ok)return response;
-    return jsonResponse({...await response.json(),catalogReady:true,orderScope:'library'},{headers:{'Cache-Control':'no-store'}});
+    return jsonResponse({...await response.json(),catalogReady:true,durableUploads:await recordsReady(env),orderScope:'library'},{headers:{'Cache-Control':'no-store'}});
   }
   const raw = url.searchParams.get("limit");
   let limit = parseInt(raw || "100", 10);
@@ -30,7 +31,7 @@ export async function onRequest(context) {
   const prefix = url.searchParams.get("prefix") || undefined;
   const value = await env.img_url.list({ limit, cursor, prefix });
 
-  const keys=await overlayStudioMetadata(env,value.keys.filter(key => !isInternalKey(key.name)));
+  const keys=await overlayStudioMetadata(env,await overlaySourceRecords(env,value.keys.filter(key => !isInternalKey(key.name))));
   if(hasStudioD1(env)){
     const memberships=await getStudioMediaFolders(env.MEDIA_STUDIO_DB,keys.map(k=>k.name));
     // D1 is authoritative: missing mapping means unfiled, even if KV has an
@@ -39,5 +40,5 @@ export async function onRequest(context) {
       key.metadata={...(key.metadata||{}),folderId:memberships.get(key.name)||null};
     }
   }
-  return jsonResponse({...value,keys,orderScope:'loaded',...(ready?{catalogReady:true}:{})},{headers:{'Cache-Control':'no-store'}});
+  return jsonResponse({...value,keys,orderScope:'loaded',...(ready?{catalogReady:true,durableUploads:await recordsReady(env)}:{})},{headers:{'Cache-Control':'no-store'}});
 }

@@ -1,3 +1,4 @@
+import {sourceRecord} from '../../utils/studio-records.js';
 import {overlayStudioMetadata} from '../../utils/studio-metadata.js';
 import {hasStudioD1,getStudioMediaFolders,listStudioFolders} from '../../utils/studio-d1.js';
 import {CATALOG_FILE,catalogType} from '../../utils/studio-catalog.js';
@@ -13,7 +14,7 @@ export async function onRequestPost({request,env}){
  }catch{return reply({error:'Invalid JSON'},400);}
  if(!Array.isArray(payload?.ids)||!payload.ids.length||payload.ids.length>50||payload.ids.some(id=>typeof id!=='string'||!CATALOG_FILE.test(id)))return reply({error:'Choose 1-50 valid media IDs'},400);
  try{
-  const ids=[...new Set(payload.ids)],raw=[];for(const id of ids){const r=await env.img_url.getWithMetadata(id);if(r?.metadata)raw.push({name:id,metadata:r.metadata});}
+  const ids=[...new Set(payload.ids)],raw=[];for(const id of ids){const r=await sourceRecord(env,id);if(r?.metadata)raw.push({name:id,metadata:r.metadata});}
   const keys=await overlayStudioMetadata(env,raw),d1=hasStudioD1(env),memberships=d1?await getStudioMediaFolders(env.MEDIA_STUDIO_DB,ids):null;
   const folders=d1?new Map((await listStudioFolders(env.MEDIA_STUDIO_DB)).map(f=>[f.id,f])):new Map();
   const path=id=>{const names=[],seen=new Set();while(id&&folders.has(id)&&!seen.has(id)){seen.add(id);const f=folders.get(id);names.unshift(f.name);id=f.parentId;}return names.join(' / ');};

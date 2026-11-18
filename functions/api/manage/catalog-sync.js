@@ -1,3 +1,4 @@
+import {overlaySourceRecords} from '../../utils/studio-records.js';
 import {catalogStatus,CATALOG_FILE,catalogMetadata,catalogType} from '../../utils/studio-catalog.js';
 import {jsonResponse} from '../../utils/http.js';
 const reply=(body,status=200)=>jsonResponse(body,{status,headers:{'Cache-Control':'no-store'}});
@@ -28,7 +29,7 @@ export async function onRequestPost({request,env}){
   if(!(await catalogStatus(env))?.ready)return reply({error:'Catalog must be initialized before maintenance'},503);
   const page=await env.img_url.list({limit:100,...(p.cursor?{cursor:p.cursor}:{})});
   if(!Array.isArray(page.keys)||typeof page.list_complete!=='boolean'||(!page.list_complete&&(typeof page.cursor!=='string'||!page.cursor||page.cursor.length>4096||page.cursor===p.cursor)))throw Error('Invalid source page');
-  const media=page.keys.filter(k=>typeof k.name==='string'&&CATALOG_FILE.test(k.name));
+  const media=await overlaySourceRecords(env,page.keys.filter(k=>typeof k.name==='string'&&CATALOG_FILE.test(k.name)));
   if(media.some(k=>!k.metadata||typeof k.metadata!=='object'||Array.isArray(k.metadata)))throw Error('Missing source metadata');
   const now=Date.now(),db=env.MEDIA_STUDIO_DB;
   const writes=media.map(k=>{const m=catalogMetadata(k.metadata,k.name);return db.prepare(`INSERT INTO studio_media_inventory(media_id,media_type,uploaded_at,metadata,indexed_at) VALUES (?,?,?,?,?)

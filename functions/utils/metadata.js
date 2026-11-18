@@ -1,3 +1,4 @@
+import {sourceRecord,persistOwnedRecord} from './studio-records.js';
 import {cutoverReadOnly} from './cutover.js';
 import {metadataD1Enabled,readStudioMetadata} from './studio-metadata.js';
 export const LIST_TYPE = {
@@ -37,7 +38,7 @@ export function normalizeMetadata(metadata, id) {
 }
 
 export async function getMetadata(env, id) {
-  const record = await env.img_url.getWithMetadata(id);
+  const record = await sourceRecord(env,id);
   if(!record?.metadata)return null;
   if(metadataD1Enabled(env)){
     try{return await readStudioMetadata(env.MEDIA_STUDIO_DB,id,record.metadata);}catch(error){if(error.code==='MEDIA_DELETED')return null;throw error;}
@@ -46,7 +47,7 @@ export async function getMetadata(env, id) {
 }
 
 export async function getOrCreateMetadata(env, id, { persist = true } = {}) {
-  const record = await env.img_url.getWithMetadata(id);
+  const record = await sourceRecord(env,id);
 
   if (record?.metadata) {
     return { ...record.metadata, ...normalizeMetadata(record.metadata, id) };
@@ -67,6 +68,7 @@ export async function getOrCreateMetadata(env, id, { persist = true } = {}) {
 
 export async function putMetadata(env, id, metadata) {
   if(cutoverReadOnly(env))return;
+  if(await persistOwnedRecord(env,id,metadata))return;
   await env.img_url.put(id, '', { metadata });
 }
 
