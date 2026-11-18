@@ -38,3 +38,11 @@ Actual deployment and migration verification are recorded below. Production cred
 - Final Cloudflare data audit: original source values preserved; 9 metadata rows, 9 inventory rows, liked 9, publication 0, no edits yet at verification, FK clean. Preview data/bindings remain separate.
 - No authenticated user mutation, real Telegram upload or deletion was performed for release verification. Full original-media readback was rejected by automatic review due to possible private-media export; no content readback is claimed as evidence. The safer HEAD-only link check timed out, so original-image HTTP/content health remains unverified in this release journal. Original IDs/values were verified, not image bytes.
 - Fixed release branch prevents later feature/documentation pushes from automatically changing Production. Keep D1 authoritative on rollback after edits. Backup namespace remains unbound to the site.
+
+
+## 2026-11-18 gallery image HTTP 500 hotfix
+
+- Feature commit 0da2c32b31248c017baa815dc660d7cd7c7a12ea; 258 tests pass. Preview d02c50b7-4200-4ca4-ac6d-1b666489f609 and Production 267a0a32-b4bf-4bb2-a488-9d7953aeb4bf succeeded. Production release branch advanced by lease; main and Draft PR remain unmerged.
+- Public file reads previously wrote KV even when no moderation result changed. A rejected write could discard a successfully fetched image and produce HTTP 500. Removed redundant writes and isolated read-through/verdict persistence failures. HEAD remains read-only; stored blocks/whitelist and newly detected adult verdicts still apply. Full stored metadata is preserved when a changed verdict is saved.
+- At inspection source KV had 578 records. Three screenshot-matched samples returned 500 before release, with one existing admin-path control returning 200. Following release, the same three HEAD samples returned 200 image/jpeg. Ordinary GET checks also returned 200; bodies cancelled, no raw media exported or decoded. Exact remote quota/error message was not obtained; temporary failed tail session removed.
+- No data migration/deletion, credentials, bindings or environment changes. This is a code-only reliability patch.

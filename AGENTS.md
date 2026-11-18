@@ -47,5 +47,5 @@ The owner communicates in Chinese and expects you to **make real, verifiable imp
 
 ## Live Production status
 
-2026-11-17 owner-authorized Production release: https://my-image-bed.pages.dev/studio/ . Production pinned to release/media-studio-v1-20261117 at 3a45de3; feature/media-studio-v1 stays development, main and Draft PR #1 unmerged. Original Production KV 8a9b05daf9384496887d063292832345 retained; dedicated Production D1 28f78f0b-b3b4-4c0e-a5c7-d7382d93aa7d enabled. Nine records/favorites migrated, AI publication count zero. Upload mode admin; write pause removed. See docs/PRODUCTION_RELEASE_20261117.md.
+2026-11-17 owner-authorized Production release: https://my-image-bed.pages.dev/studio/ . Production pinned to release/media-studio-v1-20261117 at 0da2c32 (2026-11-18 image-read hotfix); feature/media-studio-v1 stays development, main and Draft PR #1 unmerged. Original Production KV 8a9b05daf9384496887d063292832345 retained; dedicated Production D1 28f78f0b-b3b4-4c0e-a5c7-d7382d93aa7d enabled. Nine records/favorites migrated, AI publication count zero. Upload mode admin; write pause removed. See docs/PRODUCTION_RELEASE_20261117.md.
 Preview remains isolated; never mix its data/bindings with Production. Do not revert to KV-only code after D1 edits.
