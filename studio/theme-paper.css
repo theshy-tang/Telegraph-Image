@@ -287,3 +287,24 @@ button.upload-tile:not(:disabled):hover, button.upload-tile.drag-over {
 @media (max-width: 520px) {
   .studio-heading { flex-wrap: wrap; }
 }
+
+.sidebar-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin: 4px 4px 42px 9px;
+}
+#studioSidebar .sidebar-heading .brand { margin: 0; white-space: nowrap; }
+#sidebarToggle {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  margin: 0;
+}
+#sidebarToggleDock[hidden] { display: none; }
+@media (max-width: 900px) {
+  .sidebar-heading { margin: 0; flex: none; }
+}
