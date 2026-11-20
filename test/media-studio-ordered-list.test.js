@@ -32,8 +32,9 @@ describe('Studio main list order changes',()=>{
  it('sends order with a new cursor sequence and preserves selection when sorting changes',async()=>{
   const page=fs.readFileSync(path.join(__dirname,'../studio/index.html'),'utf8'),start=page.indexOf('async function loadPage('),source=page.slice(start,page.indexOf('function folderById(',start));
   const state={busy:false,items:[],seen:new Set(),selected:new Set(['selected.jpg']),cursor:'old-cursor',complete:false,tiles:new Map(),limit:100};
-  const elements={order:{value:'old'},loadMore:{},status:{},grid:{replaceChildren(){}}};let url;
-  const load=new Function('state','$','api','normalize','isSafeId','render','renderFolders','toast',source+'return loadPage;')(state,id=>elements[id],async u=>{url=u;return {keys:[],total:103,orderScope:'library',cursor:'new-cursor',list_complete:false}},x=>x,()=>true,()=>{},()=>{},()=>{});
-  await load(true,{preserveSelection:true});assert.ok(url.includes('order=old'));assert.ok(!url.includes('cursor='));assert.strictEqual(state.cursor,'new-cursor');assert.strictEqual(state.listScope,'library');assert.ok(state.selected.has('selected.jpg'));assert.strictEqual(elements.order.disabled,false);
+  const elements={order:{value:'old'},loadMore:{},status:{},gallerySkeleton:{hidden:true},grid:{replaceChildren(){},setAttribute(){},removeAttribute(){}}};let url;
+  const load=new Function('state','$','api','normalize','isSafeId','render','renderFolders','toast',source+'return loadPage;')(state,id=>elements[id],async u=>{url=u;assert.strictEqual(elements.gallerySkeleton.hidden,state.items.length>0);return {keys:[],total:103,orderScope:'library',cursor:'new-cursor',list_complete:false}},x=>x,()=>true,()=>{},()=>{},()=>{});
+  await load(true,{preserveSelection:true});assert.ok(url.includes('order=old'));assert.ok(!url.includes('cursor='));assert.strictEqual(state.cursor,'new-cursor');assert.strictEqual(state.listScope,'library');assert.ok(state.selected.has('selected.jpg'));assert.strictEqual(elements.order.disabled,false);assert.strictEqual(elements.gallerySkeleton.hidden,true);
+  state.items.push({name:'existing.jpg'});await load(true);assert.strictEqual(elements.gallerySkeleton.hidden,true);
  });
 });
