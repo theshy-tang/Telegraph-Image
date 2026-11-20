@@ -1,3 +1,11 @@
+## Current Production release — 2026-11-20
+
+- Owner approved the Preview build `a9f24b6`. Cloudflare Production deployment `a2c24424-a780-4165-8a4c-c2b6e35355bf` is successful and canonical on `release/media-studio-v1-20261117`.
+- This release adds main-gallery full-library search, combinable media filters and pixel dimensions, compact tools and card multi-select. It also includes the previously previewed detail control refinements.
+- The production branch was fast-forwarded to the tested Preview commit. The release applied no data migration, storage binding update or production data write. Development remains on `feature/media-studio-v1`. Draft PR #1 remains open.
+- All 290 tests passed on the promoted commit. Chrome opened the canonical Studio page. Authenticated search against the real Production library was not exercised during this release.
+- The previous D1-compatible code deployment is `290fb66c-ef42-4c89-81f1-ec8cc368a1b2` / `6ef705b`. Preserve Production D1 and KV bindings if rolling back the code.
+
 # Current Production status — 2026-11-17
 
 Production release updated 2026-11-18 with owner authorization: https://my-image-bed.pages.dev/studio/ . Production pinned to release/media-studio-v1-20261117 at 769abc4 (2026-11-18 ordered listing and upload diagnostics); feature/media-studio-v1 stays development, main and Draft PR #1 unmerged. Original Production KV 8a9b05daf9384496887d063292832345 retained; dedicated Production D1 28f78f0b-b3b4-4c0e-a5c7-d7382d93aa7d enabled. Initial migration retained nine records/favorites; these are historical migration counts, not current library totals. Upload mode admin; write pause removed. See docs/PRODUCTION_RELEASE_20261117.md.
