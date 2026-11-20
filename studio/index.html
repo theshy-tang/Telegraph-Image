@@ -374,7 +374,7 @@ body.working button[data-action]{opacity:.6}
 </div>
 <div class="folder-dialog-actions"><button type="button" class="ghost" id="tagCancel">取消</button><button type="submit" class="primary" id="tagSave">应用标签</button></div>
 </form></dialog>
-<dialog id="preview"><div class="modalhead"><strong>素材详情</strong><button class="close" id="closePreview">✕</button></div><div class="modalbody"><div id="previewMedia"></div><div class="modalinfo" id="previewInfo"></div></div></dialog>
+<dialog id="preview"><div class="modalhead"><strong>素材详情</strong><button class="close" id="closePreview">✕</button></div><div id="previewMedia"></div><div class="modalbody" tabindex="0" role="region" aria-label="素材资料"><div class="modalinfo" id="previewInfo"></div></div></dialog>
 <dialog id="recoverUploadDialog" class="wallpaper-dialog" aria-labelledby="recoverUploadTitle">
 <div class="modalhead"><strong id="recoverUploadTitle">补录已存储的文件</strong><button type="button" class="close" id="recoverUploadClose" aria-label="关闭补录">✕</button></div>
 <form id="recoverUploadForm"><div class="wallpaper-fields">
@@ -1132,7 +1132,7 @@ function detailTagList(tags){
 }
 function detailDirty(){
   const d=detailSession;
-  return d&&(Boolean(d.addInput?.value.trim())||Boolean(d.editingInput&&d.editingInput.value!==d.editingTag)||d.name.value.trim()!==d.x.name||d.category.value.trim()!==d.x.category||JSON.stringify(d.tags)!==JSON.stringify(d.x.tags)||['description','sourceUrl','prompt'].some(k=>d[k]&&d[k].value!==(d.x[k]||'')));
+  return d&&(Boolean(d.addInput?.value.trim())||Boolean(d.editingInput&&d.editingInput.value!==d.editingTag)||d.name.value.trim()!==d.x.name||(d.category&&d.category.value.trim()!==d.x.category)||JSON.stringify(d.tags)!==JSON.stringify(d.x.tags)||['description','sourceUrl','prompt'].some(k=>d[k]&&d[k].value!==(d.x[k]||'')));
 }
 function closeDetails(){
   if(detailSession?.busy){toast('正在保存，请稍候');return;}
@@ -1154,6 +1154,7 @@ async function detailWrite(action,payload={}){
   finally{d.busy=false;d.fields.disabled=false;}
 }
 function preview(x){
+  $('previewInfo').parentElement.scrollTop=0;
   const zone=$('previewMedia');zone.replaceChildren();
   if(x.type==='image'){const img=elt('img');img.src=fileUrl(x.id);img.alt=x.name;img.addEventListener('error',()=>{zone.replaceChildren(elt('div','broken','图片加载失败，请检查原图链接。'));});zone.append(img);}
   else if(x.type==='video'){const v=elt('video');v.src=fileUrl(x.id);v.controls=true;zone.append(v);}
@@ -1166,13 +1167,10 @@ function preview(x){
   if(x.albums.length)fields.append(elt('p','muted','旧版相册标签：'+x.albums.join('、')));
   function field(title,input){const label=elt('label','detail-label',title);label.append(input);fields.append(label);return input;}
   d.name=field('显示名称',elt('input'));d.name.value=x.name;d.name.maxLength=160;
-  d.category=field('分类',elt('input'));d.category.value=x.category;d.category.maxLength=48;d.category.placeholder='添加素材分类';
   if(state.assetDetailsEnabled){
-    fields.append(elt('div','detail-section-title','素材资料'));
-    d.description=field('素材描述',elt('textarea'));d.description.value=x.description||'';d.description.maxLength=4000;d.description.rows=4;d.description.placeholder='描述画面、用途或选图要点，最多 4000 字';
-    d.sourceUrl=field('来源链接',elt('input'));d.sourceUrl.type='url';d.sourceUrl.value=x.sourceUrl||'';d.sourceUrl.maxLength=2048;d.sourceUrl.placeholder='https://…，不保存带账号密码的链接';
-    d.prompt=field('AI 提示词',elt('textarea'));d.prompt.value=x.prompt||'';d.prompt.maxLength=8000;d.prompt.rows=6;d.prompt.placeholder='记录原始提示词、模型参数等，最多 8000 字';
-    const copyPrompt=elt('button','ghost','复制提示词');copyPrompt.type='button';copyPrompt.addEventListener('click',async()=>{try{await navigator.clipboard.writeText(d.prompt.value);message.textContent='已复制提示词';}catch{message.textContent='复制失败，请检查剪贴板权限';}});fields.append(copyPrompt,elt('p','muted','描述、来源与提示词仅供后台管理，不会随 AI 发布自动进入公开目录。保存和导出时保留原文，不调用 AI 服务。'));
+    d.sourceUrl=field('来源链接',elt('input'));
+    d.sourceUrl.type='url';d.sourceUrl.value=x.sourceUrl||'';d.sourceUrl.maxLength=2048;
+    d.sourceUrl.placeholder='https://…';
   }
   fields.append(elt('div','detail-section-title','标签'));
   const chips=elt('div','detail-tags');fields.append(chips);
@@ -1237,7 +1235,20 @@ function preview(x){
   add.addEventListener('click',addTags);addInput.addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();addTags();}});
   addRow.append(addInput,add,suggestions);fields.append(addRow,elt('p','muted','点击标签文字修改，× 移除，⌕ 按标签查找。修改后保存资料。'));
   const save=elt('button','primary','保存资料');save.type='button';
-  save.addEventListener('click',async()=>{try{if(d.commitTagEdit&&!d.commitTagEdit())return;if(addInput.value.trim()){addTags();if(addInput.value.trim())return;}const tags=detailTagList(d.tags);if(await detailWrite('edit_details',{fileName:d.name.value,category:d.category.value,tags,...(d.description?{description:d.description.value,sourceUrl:d.sourceUrl.value,prompt:d.prompt.value}:{})})){d.baseVersion=d.x.metadataVersion;d.tags=[...d.x.tags];d.name.value=d.x.name;d.category.value=d.x.category;for(const k of ['description','sourceUrl','prompt'])if(d[k])d[k].value=d.x[k]||'';drawTags();}}catch(error){message.textContent=error.message;}});
+  save.addEventListener('click',async()=>{
+    try{
+      if(d.commitTagEdit&&!d.commitTagEdit())return;
+      if(addInput.value.trim()){addTags();if(addInput.value.trim())return;}
+      const tags=detailTagList(d.tags);
+      const details={fileName:d.name.value,category:d.x.category||'',tags};
+      if(d.sourceUrl)details.sourceUrl=d.sourceUrl.value;
+      if(!await detailWrite('edit_details',details))return;
+      d.baseVersion=d.x.metadataVersion;
+      d.tags=[...d.x.tags];d.name.value=d.x.name;
+      if(d.sourceUrl)d.sourceUrl.value=d.x.sourceUrl||'';
+      drawTags();
+    }catch(error){message.textContent=error.message;}
+  });
   const reload=elt('button','ghost','重新载入资料');reload.type='button';
   reload.addEventListener('click',async()=>{
     if(d.busy)return;if(detailDirty()&&!confirm('重新载入会放弃未保存修改，继续？'))return;

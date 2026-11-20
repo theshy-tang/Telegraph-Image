@@ -177,3 +177,36 @@ button.upload-tile:not(:disabled):hover, button.upload-tile.drag-over {
 @media (prefers-reduced-motion: reduce) {
   .upload-tile-icon { transition: none; transform: none !important; }
 }
+
+/* Keep the preview above the independently scrolling details. */
+#preview[open] {
+  display: flex;
+  flex-direction: column;
+  width: min(680px, 94vw);
+  max-height: 90dvh;
+  overflow: hidden;
+}
+#preview .modalhead { flex: 0 0 auto; padding: 10px 16px; }
+#previewMedia {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  padding: 8px 12px;
+  background: #eeeee8;
+  border-bottom: 1px solid var(--paper-border);
+}
+#previewMedia :is(img, video) {
+  display: block;
+  width: auto;
+  max-width: 100%;
+  height: auto;
+  max-height: min(35dvh, 380px);
+  object-fit: contain;
+}
+#preview .modalbody {
+  display: block;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 14px 16px;
+}
