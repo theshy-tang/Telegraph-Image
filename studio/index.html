@@ -1173,13 +1173,8 @@ function preview(x){
   }
   fields.append(elt('div','detail-section-title','标签'));
   const chips=elt('div','detail-tags');fields.append(chips);
-  const removedTagPositions=new Map();
-  function animateSavedTagRemovals(savedTags){
-    const origins=[...removedTagPositions].filter(([tag])=>!savedTags.includes(tag));
-    removedTagPositions.clear();
-    if(!origins.length||matchMedia('(prefers-reduced-motion: reduce)').matches)return;
-    // Keep the effect local to the detail panel and bound the work per save.
-    const [,position]=origins.at(-1);
+  function animateTagRemoval(position){
+    if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;
     const burst=elt('span','tag-dissolve');
     burst.setAttribute('aria-hidden','true');
     burst.style.left=Math.min(position.x,chips.clientWidth)+'px';
@@ -1215,13 +1210,12 @@ function preview(x){
         input.addEventListener('blur',commit);input.addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();commit();}if(event.key==='Escape'){event.preventDefault();done=true;drawTags();}});
       });
       remove.addEventListener('click',()=>{
-        if(d.x.tags.includes(tag)){
-          const row=chips.getBoundingClientRect(),box=chip.getBoundingClientRect();
-          removedTagPositions.set(tag,{x:box.left-row.left+box.width/2,y:box.top-row.top+box.height/2,width:box.width});
-        }
+        const row=chips.getBoundingClientRect(),box=chip.getBoundingClientRect();
+        const position={x:box.left-row.left+box.width/2,y:box.top-row.top+box.height/2,width:box.width};
         d.tags=d.tags.filter(t=>t!==tag);
         message.textContent='标签已修改，点击保存资料生效';
         drawTags();
+        animateTagRemoval(position);
         (chips.querySelector('button')||d.addInput)?.focus();
       });
       find.addEventListener('click',()=>{if(detailDirty()&&!confirm('按标签筛选会关闭详情并放弃未保存修改，继续？'))return;if(![...$('tagFilter').options].some(option=>option.value===tag))$('tagFilter').add(new Option(tag,tag));$('tagFilter').value=tag;$('preview').close();detailSession=null;render();});
@@ -1237,7 +1231,7 @@ function preview(x){
   add.addEventListener('click',addTags);addInput.addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();addTags();}});
   addRow.append(addInput,add,suggestions);fields.append(addRow,elt('p','muted','点击标签文字修改，× 移除，⌕ 按标签查找。修改后保存资料。'));
   const save=elt('button','primary','保存资料');save.type='button';
-  save.addEventListener('click',async()=>{try{if(d.commitTagEdit&&!d.commitTagEdit())return;if(addInput.value.trim()){addTags();if(addInput.value.trim())return;}const tags=detailTagList(d.tags);if(await detailWrite('edit_details',{fileName:d.name.value,category:d.category.value,tags,...(d.description?{description:d.description.value,sourceUrl:d.sourceUrl.value,prompt:d.prompt.value}:{})})){d.baseVersion=d.x.metadataVersion;d.tags=[...d.x.tags];d.name.value=d.x.name;d.category.value=d.x.category;for(const k of ['description','sourceUrl','prompt'])if(d[k])d[k].value=d.x[k]||'';drawTags();animateSavedTagRemovals(d.tags);}}catch(error){message.textContent=error.message;}});
+  save.addEventListener('click',async()=>{try{if(d.commitTagEdit&&!d.commitTagEdit())return;if(addInput.value.trim()){addTags();if(addInput.value.trim())return;}const tags=detailTagList(d.tags);if(await detailWrite('edit_details',{fileName:d.name.value,category:d.category.value,tags,...(d.description?{description:d.description.value,sourceUrl:d.sourceUrl.value,prompt:d.prompt.value}:{})})){d.baseVersion=d.x.metadataVersion;d.tags=[...d.x.tags];d.name.value=d.x.name;d.category.value=d.x.category;for(const k of ['description','sourceUrl','prompt'])if(d[k])d[k].value=d.x[k]||'';drawTags();}}catch(error){message.textContent=error.message;}});
   const reload=elt('button','ghost','重新载入资料');reload.type='button';
   reload.addEventListener('click',async()=>{
     if(d.busy)return;if(detailDirty()&&!confirm('重新载入会放弃未保存修改，继续？'))return;
