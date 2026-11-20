@@ -379,7 +379,7 @@ body.working button[data-action]{opacity:.6}
 </div>
 <div class="folder-dialog-actions"><button type="button" class="ghost" id="tagCancel">取消</button><button type="submit" class="primary" id="tagSave">应用标签</button></div>
 </form></dialog>
-<dialog id="preview"><div class="modalhead"><strong>素材详情</strong><button class="close" id="closePreview">✕</button></div><div id="previewMedia"></div><div class="modalbody" tabindex="0" role="region" aria-label="素材资料"><div class="modalinfo" id="previewInfo"></div></div></dialog>
+<dialog id="preview"><div class="modalhead"><strong>素材详情</strong><button class="close" id="closePreview" type="button" aria-label="关闭素材详情">✕</button></div><div id="previewMedia"></div><div class="modalbody" tabindex="0" role="region" aria-label="素材资料"><div class="modalinfo" id="previewInfo"></div></div></dialog>
 <dialog id="recoverUploadDialog" class="wallpaper-dialog" aria-labelledby="recoverUploadTitle">
 <div class="modalhead"><strong id="recoverUploadTitle">补录已存储的文件</strong><button type="button" class="close" id="recoverUploadClose" aria-label="关闭补录">✕</button></div>
 <form id="recoverUploadForm"><div class="wallpaper-fields">
@@ -1211,7 +1211,26 @@ function preview(x){
   showImageSize();
   fields.append(header);
   if(x.albums.length)fields.append(elt('p','muted','旧版相册标签：'+x.albums.join('、')));
-  function field(title,input){const label=elt('label','detail-label',title);label.append(input);fields.append(label);return input;}
+  function field(title,input){
+    const label=elt('label','detail-label');
+    label.append(elt('span','',title),input);
+    fields.append(label);
+    return input;
+  }
+  function detailButton(style,label,path){
+    const button=elt('button',style+' detail-control');
+    button.type='button';
+    const svgNS='http://www.w3.org/2000/svg';
+    const icon=document.createElementNS(svgNS,'svg');
+    const stroke=document.createElementNS(svgNS,'path');
+    icon.setAttribute('viewBox','0 0 24 24');
+    icon.setAttribute('aria-hidden','true');
+    stroke.setAttribute('d',path);
+    icon.append(stroke);
+    const text=elt('span','',label);
+    button.append(icon,text);
+    return {button,text,stroke};
+  }
   d.name=field('显示名称',elt('input'));d.name.value=x.name;d.name.maxLength=160;
   if(state.assetDetailsEnabled){
     d.sourceUrl=field('来源链接',elt('input'));
@@ -1273,14 +1292,14 @@ function preview(x){
     }
   }
   drawTags();
-  const addRow=elt('div','detail-add'),addInput=elt('input'),add=elt('button','ghost','＋ 添加');add.type='button';addInput.placeholder='输入标签，或选择已有标签';addInput.setAttribute('aria-label','添加标签');addInput.setAttribute('list','detailTagSuggestions');
+  const addRow=elt('div','detail-add'),addInput=elt('input'),add=detailButton('ghost','添加标签','M12 5v14M5 12h14').button;addInput.placeholder='输入或选择标签';addInput.setAttribute('aria-label','添加标签');addInput.setAttribute('list','detailTagSuggestions');
   const suggestions=elt('datalist');suggestions.id='detailTagSuggestions';
   for(const tag of collectTagChoices(state.items,state.selected,'add_tags')){const option=elt('option');option.value=tag.name;suggestions.append(option);}
   d.addInput=addInput;
   const addTags=()=>{try{d.tags=detailTagList([...d.tags,...parseTagNames(addInput.value)]);addInput.value='';message.textContent='标签已修改，点击保存资料生效';drawTags();}catch(error){message.textContent=error.message;}};
   add.addEventListener('click',addTags);addInput.addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();addTags();}});
   addRow.append(addInput,add,suggestions);fields.append(addRow,elt('p','muted','点击标签文字修改，× 移除，⌕ 按标签查找。修改后保存资料。'));
-  const save=elt('button','primary','保存资料');save.type='button';
+  const {button:save,text:saveLabel}=detailButton('primary','保存资料','m5 12 4 4L19 6');
   save.addEventListener('click',async()=>{
     try{
       if(d.commitTagEdit&&!d.commitTagEdit())return;
@@ -1288,14 +1307,20 @@ function preview(x){
       const tags=detailTagList(d.tags);
       const details={fileName:d.name.value,category:d.x.category||'',tags};
       if(d.sourceUrl)details.sourceUrl=d.sourceUrl.value;
-      if(!await detailWrite('edit_details',details))return;
+      if(d.busy)return;
+      saveLabel.textContent='正在保存…';
+      try{
+        if(!await detailWrite('edit_details',details))return;
+      }finally{
+        saveLabel.textContent='保存资料';
+      }
       d.baseVersion=d.x.metadataVersion;
       d.tags=[...d.x.tags];d.name.value=d.x.name;
       if(d.sourceUrl)d.sourceUrl.value=d.x.sourceUrl||'';
       drawTags();
     }catch(error){message.textContent=error.message;}
   });
-  const reload=elt('button','ghost','重新载入资料');reload.type='button';
+  const reload=detailButton('ghost detail-quiet','重新载入资料','M20 7v5h-5M4 17v-5h5M5 9a7 7 0 0 1 12-3l3 6M4 12l3 6a7 7 0 0 0 12-3').button;
   reload.addEventListener('click',async()=>{
     if(d.busy)return;if(detailDirty()&&!confirm('重新载入会放弃未保存修改，继续？'))return;
     d.busy=true;fields.disabled=true;
@@ -1303,31 +1328,51 @@ function preview(x){
     catch(error){message.textContent='重新载入失败：'+error.message;}
     finally{d.busy=false;fields.disabled=false;}
   });
-  fields.append(save,reload,elt('hr'));
+  const saveActions=elt('div','detail-actions');
+  saveActions.append(save,reload);
+  fields.append(saveActions,elt('hr'));
   const folder=elt('select');folderOptions(folder,null,'未归类');folder.value=x.folderId||'';field('所属相册',folder);
-  const move=elt('button','ghost','应用相册');move.type='button';move.addEventListener('click',()=>detailWrite('move_folder',{folderId:folder.value||null}));fields.append(move);
-  const favorite=elt('button','ghost',x.liked?'取消收藏':'收藏素材');favorite.type='button';favorite.addEventListener('click',async()=>{if(await detailWrite(d.x.liked?'unfavorite':'favorite'))favorite.textContent=d.x.liked?'取消收藏':'收藏素材';});
-  const publish=elt('button','ghost',x.published?'撤销 AI 发布':'发布给 AI');publish.type='button';publish.addEventListener('click',async()=>{if(!d.x.published&&!confirm('确认将此图片发布到无需登录的公开 AI 素材目录？'))return;if(await detailWrite(d.x.published?'unpublish':'publish'))publish.textContent=d.x.published?'撤销 AI 发布':'发布给 AI';});
-  const actions=elt('div','detail-actions');actions.append(favorite,publish);fields.append(actions,elt('hr'));
-  const copy=elt('button','ghost detail-copy');copy.type='button';
-  const copyIcon=elt('span','detail-copy-icon','↗');
-  const copyLabel=elt('span','','复制真实链接');
-  copyIcon.setAttribute('aria-hidden','true');
-  copy.append(copyIcon,copyLabel);
+  const move=detailButton('ghost','应用相册','M3 7h7l2 2h9v11H3z').button;move.addEventListener('click',()=>detailWrite('move_folder',{folderId:folder.value||null}));fields.append(move);
+  const {button:favorite,text:favoriteLabel}=detailButton('ghost',x.liked?'取消收藏':'收藏素材','M12 20 4.6 12.6a4.4 4.4 0 0 1 6.2-6.2L12 7.6l1.2-1.2a4.4 4.4 0 0 1 6.2 6.2L12 20z');
+  const {button:publish,text:publishLabel}=detailButton('ghost',x.published?'撤销 AI 发布':'发布给 AI','M12 3l2.4 6.6L21 12l-6.6 2.4L12 21l-2.4-6.6L3 12l6.6-2.4L12 3z');
+  function refreshActionLabels(){
+    favorite.dataset.active=String(d.x.liked);
+    publish.dataset.active=String(d.x.published);
+    favoriteLabel.textContent=d.x.liked?'取消收藏':'收藏素材';
+    publishLabel.textContent=d.x.published?'撤销 AI 发布':'发布给 AI';
+  }
+  refreshActionLabels();
+  favorite.addEventListener('click',async()=>{
+    if(await detailWrite(d.x.liked?'unfavorite':'favorite'))refreshActionLabels();
+  });
+  publish.addEventListener('click',async()=>{
+    if(!d.x.published&&!confirm('确认将此图片发布到无需登录的公开 AI 素材目录？'))return;
+    if(await detailWrite(d.x.published?'unpublish':'publish'))refreshActionLabels();
+  });
+  const actions=elt('div','detail-actions');
+  actions.append(favorite,publish);
+  fields.append(actions,elt('hr'));
+  const linkPath='M10 13a3 3 0 0 0 4 0l4-4a3 3 0 0 0-4-4l-2 2m2 4a3 3 0 0 0-4 0l-4 4a3 3 0 0 0 4 4l2-2';
+  const {button:copy,text:copyLabel,stroke:copyIcon}=detailButton('ghost detail-copy','复制真实链接',linkPath);
   let copyReset;
   copy.addEventListener('click',async()=>{
     try{
       await navigator.clipboard.writeText(publicFileUrl(x.id));
       clearTimeout(copyReset);
-      copy.dataset.copied='true';copyIcon.textContent='✓';copyLabel.textContent='已复制链接';
+      copy.dataset.copied='true';copyIcon.setAttribute('d','m5 12 4 4L19 6');copyLabel.textContent='已复制链接';
       message.textContent='已复制原图链接';
       copyReset=setTimeout(()=>{
-        delete copy.dataset.copied;copyIcon.textContent='↗';copyLabel.textContent='复制真实链接';
+        delete copy.dataset.copied;copyIcon.setAttribute('d',linkPath);copyLabel.textContent='复制真实链接';
       },1800);
     }catch{message.textContent='复制失败，请检查剪贴板权限';}
   });
-  const download=elt('button','ghost','下载 / 导出');download.type='button';download.addEventListener('click',()=>openExport([x.id],'file'));
-  fields.append(download,copy,elt('p','muted','仅修改素材资料，不更改原始文件和图片 URL。'));info.append(fields,message);$('preview').showModal();
+  const download=detailButton('ghost','下载 / 导出','M12 3v12m-5-5 5 5 5-5M4 16v4h16v-4').button;
+  download.addEventListener('click',()=>openExport([x.id],'file'));
+  const fileActions=elt('div','detail-actions');
+  fileActions.append(download,copy);
+  fields.append(fileActions);
+  info.append(fields,message);
+  $('preview').showModal();
 }
 const tagEditor={action:null,chosen:new Set()};
 function parseTagNames(raw){
