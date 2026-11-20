@@ -9,6 +9,18 @@ function parseSearch(url){
   const p=url.searchParams;
   const filters={q:(p.get('q')||'').trim(),tag:p.get('tag')||'',album:p.get('album')||'',view:p.get('view')||'all',folder:p.get('folder')||'all',descendants:p.get('descendants')==='true',order:p.get('order')||'new'};
   if(filters.q.length>256||filters.tag.length>48||filters.album.length>48||!['all','image','video','other','favorites','published'].includes(filters.view)||!['new','old','name'].includes(filters.order)||(!['all','unfiled'].includes(filters.folder)&&!/^[a-f0-9]{32}$/.test(filters.folder)))reject();
+  for(const flag of ['favorite','published']){
+    const value=p.get(flag);
+    if(value!==null&&value!=='true'&&value!=='false')reject();
+    filters[flag]=value==='true';
+  }
+  filters.orientation=p.get('orientation')||'';
+  if(!['','landscape','portrait','square'].includes(filters.orientation))reject();
+  for(const name of ['min_width','min_height']){
+    const value=p.get(name)||'';
+    if(value&&(!/^[1-9]\d{0,5}$/.test(value)||Number(value)>100000))reject();
+    filters[name]=value?Number(value):0;
+  }
   const limit=Number(p.get('limit')||50);if(!Number.isInteger(limit)||limit<1||limit>100)reject();
   let cursor=null;
   if(p.has('cursor')){
@@ -37,6 +49,16 @@ export async function onRequestGet({request,env}){
     if(['image','video','other'].includes(s.view)){where.push('i.media_type=?');params.push(s.view);}
     if(s.view==='favorites')where.push(`json_extract(${DOC},'$.liked')=1`);
     if(s.view==='published')where.push(`json_extract(${DOC},'$.aiPublished')=1`);
+    if(s.favorite&&s.view!=='favorites')where.push(`json_extract(${DOC},'$.liked')=1`);
+    if(s.published&&s.view!=='published')where.push(`json_extract(${DOC},'$.aiPublished')=1`);
+    if(s.orientation||s.min_width||s.min_height){
+      const width=`json_extract(${DOC},'$.width')`;
+      const height=`json_extract(${DOC},'$.height')`;
+      where.push("i.media_type='image'",`typeof(${width})='integer' AND ${width} BETWEEN 1 AND 100000`,`typeof(${height})='integer' AND ${height} BETWEEN 1 AND 100000`);
+      if(s.orientation)where.push(`${width} ${{landscape:'>',portrait:'<',square:'='}[s.orientation]} ${height}`);
+      if(s.min_width){where.push(`${width}>=?`);params.push(s.min_width);}
+      if(s.min_height){where.push(`${height}>=?`);params.push(s.min_height);}
+    }
     if(s.folder==='unfiled')where.push('f.folder_id IS NULL');
     else if(s.folder!=='all'){
       where.push(s.descendants?'f.folder_id IN (WITH RECURSIVE sub(id) AS (SELECT ? UNION SELECT child.id FROM studio_folders child JOIN sub ON child.parent_id=sub.id) SELECT id FROM sub)':'f.folder_id=?');params.push(s.folder);

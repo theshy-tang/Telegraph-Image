@@ -246,18 +246,24 @@ body.working button[data-action]{opacity:.6}
 <div class="top">
 <div class="studio-heading">
 <div id="sidebarToggleDock" hidden></div>
-<div><h1 id="pageTitle">全部素材</h1><div class="muted">管理你的图片、视频、私人收藏和工作素材</div></div></div>
-<div class="toolbar"><button id="recoverUploadOpen" type="button" class="ghost" disabled>补录上传</button><button id="wallpaperOpen" type="button" class="ghost">背景设置</button><button id="wallpaperMotion" type="button" class="ghost hidden">暂停背景</button><button id="reload" class="ghost">↻ 刷新</button><button id="uploadBtn" class="upload-tile" type="button">
+<div><h1 id="pageTitle">全部素材</h1></div></div>
+<div class="toolbar studio-toolbar">
+<details class="studio-menu" id="studioTools"><summary>更多</summary><div class="studio-menu-popover">
+<button id="wallpaperOpen" type="button" class="ghost">背景设置</button>
+<button id="recoverUploadOpen" type="button" class="ghost" disabled>补录上传</button>
+<button id="indexMaintenanceOpen" type="button" class="ghost" disabled>索引维护</button>
+<button id="tagManagerOpen" type="button" class="ghost" disabled>标签管理</button>
+</div></details>
+<button id="wallpaperMotion" type="button" class="ghost hidden">暂停背景</button>
+<button id="reload" type="button" class="ghost">刷新</button><button id="uploadBtn" class="upload-tile" type="button">
   <span class="upload-tile-icon" aria-hidden="true">↑</span>
   <span><strong>上传素材</strong><small>点击选择或拖入图片、视频</small></span>
 </button><input id="fileInput" type="file" accept="image/*,video/*" multiple class="hidden"></div>
 </div>
-<section id="uploadFeedback" class="upload-feedback hidden" aria-label="上传进度与结果" role="status" aria-live="polite"><div><strong>上传任务</strong><div id="uploadFeedbackMessage" class="upload-feedback-message"></div></div><button type="button" id="uploadFeedbackClose" class="ghost" aria-label="收起上传结果">收起</button></section>
-<div class="stats">
-<div class="stat"><span class="muted">已加载素材</span><strong id="statAll">0</strong><small>支持继续加载</small></div>
-<div class="stat"><span class="muted">已收藏</span><strong id="statFavorite">0</strong><small>仅在当前已加载素材中</small></div>
-<div class="stat"><span class="muted">已发布给 AI</span><strong id="statAI">0</strong><small>公开目录中的已加载素材</small></div>
-</div>
+<details id="uploadFeedback" class="upload-feedback hidden">
+<summary id="uploadFeedbackTitle">上传任务</summary>
+<div class="upload-feedback-content"><div id="uploadFeedbackMessage" class="upload-feedback-message" role="status"></div><button type="button" id="uploadFeedbackClose" class="ghost">隐藏结果</button></div>
+</details>
 <div id="folderbar" class="folderbar">
 <select id="folderMobile" class="mobile-folder-select" aria-label="选择相册"><option value="all">全部相册</option><option value="unfiled">未归类</option></select>
 <div class="folder-context"><span class="folder-path-icon">▤</span><nav id="folderPath" class="folder-breadcrumb" aria-label="相册路径"></nav></div>
@@ -272,8 +278,28 @@ body.working button[data-action]{opacity:.6}
 </div>
 <section class="panel">
 <div id="childFolders" class="child-folder-region hidden" aria-label="当前相册的子文件夹"></div>
-<div class="heading"><div><h2>素材资源管理</h2><div class="muted" id="resultCount" role="status" style="margin-top:5px">加载中...</div></div><div class="toolbar"><button id="indexMaintenanceOpen" type="button" class="ghost" disabled>索引维护</button><button id="tagManagerOpen" type="button" class="ghost" disabled>标签管理</button><button id="globalSearchOpen" type="button" class="ghost" disabled title="全库索引准备好后可用">⌕ 全库检索</button><button id="selectPage" class="ghost">✓ 全选当前结果</button></div></div>
-<div class="toolbar"><input id="search" class="search" placeholder="⌕ 搜索文件名、标签、相册..." aria-label="搜索素材"><select id="tagFilter" aria-label="按标签筛选"><option value="">全部标签</option></select><select id="albumFilter" title="旧版标签式相册（兼容旧数据）"><option value="">旧版相册标签</option></select><select id="order"><option value="new">最新上传</option><option value="old">最早上传</option><option value="name">名称排序</option></select></div>
+<div class="heading gallery-heading">
+  <div><h2>素材图库</h2><div class="muted" id="resultCount" role="status">加载中…</div></div>
+  <div class="toolbar">
+    <button id="selectMode" class="ghost" type="button" aria-pressed="false">多选</button>
+    <button id="selectPage" class="ghost" type="button">全选已显示</button>
+  </div>
+</div>
+<div class="toolbar gallery-searchbar">
+  <input id="search" class="search" type="search" maxlength="256" placeholder="搜索文件名、标签…" aria-label="搜索素材">
+  <select id="tagFilter" aria-label="按标签筛选"><option value="">全部标签</option></select>
+  <select id="albumFilter" aria-label="按旧版相册标签筛选"><option value="">旧版相册标签</option></select>
+  <select id="order" aria-label="排序"><option value="new">最新上传</option><option value="old">最早上传</option><option value="name">名称排序</option></select>
+  <details class="studio-menu gallery-dimensions" id="dimensionFilters" hidden>
+    <summary>图片尺寸 <span id="sizeFilterCount" class="filter-count" hidden></span></summary>
+    <div class="studio-menu-popover gallery-dimension-fields">
+      <label>图片方向<select id="orientationFilter"><option value="">不限方向</option><option value="landscape">横图</option><option value="portrait">竖图</option><option value="square">方图</option></select></label>
+      <label>最小宽度（px）<input id="minWidth" type="number" min="1" max="100000" step="1" inputmode="numeric" placeholder="如 1920"></label>
+      <label>最小高度（px）<input id="minHeight" type="number" min="1" max="100000" step="1" inputmode="numeric" placeholder="如 1080"></label>
+      <div class="toolbar"><button id="applySize" class="primary" type="button">应用尺寸</button><button id="clearSize" class="ghost" type="button">清除</button></div>
+    </div>
+  </details>
+</div>
 <div class="filterbar">
   <div id="chips" class="gallery-filters" role="group" aria-label="素材筛选">
     <div class="gallery-segments" role="group" aria-label="媒体类型">
@@ -288,7 +314,17 @@ body.working button[data-action]{opacity:.6}
   </div>
   <span class="muted" id="selectedInfo">未选择</span>
 </div>
-<div id="bulkbar" class="bulkbar hidden"><span class="count" id="selectedCount">已选择 0 项</span><button data-action="favorite">♡ 收藏</button><button data-action="unfavorite">取消收藏</button><button data-action="add_tags">＋ 标签</button><button data-action="remove_tags">－ 标签</button><button data-action="move_folder">▤ 移入相册</button><button data-action="clear_folder">移出相册</button><button data-action="set_category">分类</button><button data-action="publish">✧ 发布 AI</button><button data-action="unpublish">撤销 AI 发布</button><button id="exportSelected" type="button">下载 / 导出</button><button id="clearSelection">清除选择</button></div>
+<div id="bulkbar" class="bulkbar hidden">
+  <span class="count" id="selectedCount">已选 0 项</span>
+  <button data-action="add_tags">加标签</button><button data-action="move_folder">移入相册</button>
+  <button id="exportSelected" type="button">下载 / 导出</button>
+  <details class="studio-menu" id="bulkTools"><summary>更多操作</summary><div class="studio-menu-popover">
+    <button data-action="favorite">收藏</button><button data-action="unfavorite">取消收藏</button>
+    <button data-action="remove_tags">移除标签</button><button data-action="clear_folder">移出相册</button>
+    <button data-action="set_category">分类</button><button data-action="unpublish">撤销 AI 发布</button>
+  </div></details>
+  <button data-action="publish" class="bulk-publish">发布给 AI</button><button id="clearSelection" type="button">清除选择</button>
+</div>
 <div class="gallery-view" role="group" aria-label="图片展示设置">
 <span class="gallery-mode">自适应拼贴 · 原图比例</span>
 <label class="gallery-size" for="gallerySize">缩略图大小 <input id="gallerySize" type="range" min="140" max="320" step="20" value="200"><output id="gallerySizeValue" for="gallerySize">200</output></label>
@@ -298,7 +334,7 @@ body.working button[data-action]{opacity:.6}
   <div><span></span><span></span><span></span></div>
   <div><span></span><span></span><span></span></div>
 </div>
-<div id="grid" class="grid" aria-live="polite"></div>
+<div id="grid" class="grid" aria-label="素材结果"></div>
 <div class="bottom-actions">
 <button id="loadMore" class="ghost">加载更多素材</button>
 <button id="selectAllMatched" class="ghost">选择全部匹配结果（包含未加载页）</button>
@@ -397,12 +433,12 @@ body.working button[data-action]{opacity:.6}
 <label>背景类型<select id="wallpaperType"><option value="default">暖灰纯色</option><option value="image">素材库图片</option><option value="video">素材库视频</option></select></label>
 <div id="wallpaperOptions" class="wallpaper-options hidden">
 <label>查找已加载素材<input id="wallpaperSearch" type="search" placeholder="搜索文件名"></label>
-<label>选择背景素材<select id="wallpaperAsset"><option value="">请选择素材</option></select></label>
+<label>选择背景素材<select id="wallpaperAsset"><option value="">请选择素材</option></select></label><div id="wallpaperPickerStatus" class="muted" role="status"></div>
 <button type="button" id="wallpaperMore" class="ghost">加载更多素材</button>
 <label>背景遮罩<span class="wallpaper-range"><input id="wallpaperMask" type="range" min="35" max="85" value="60"><output id="wallpaperMaskValue">60%</output></span></label>
 <label>面板不透明度<span class="wallpaper-range"><input id="wallpaperSurface" type="range" min="80" max="100" value="94"><output id="wallpaperSurfaceValue">94%</output></span></label>
 </div>
-<p class="wallpaper-help">仅使用现有素材库中的图片或视频。选择范围为已加载素材，可继续加载；不修改原文件、收藏或 AI 发布状态。壁纸铺满屏幕时可能裁切边缘，素材网格仍按原比例显示。</p>
+<p class="wallpaper-help">仅使用现有素材库中的图片或视频。可按文件名搜索并继续加载；不修改原文件、收藏或 AI 发布状态。壁纸铺满屏幕时可能裁切边缘，素材网格仍按原比例显示。</p>
 <p class="wallpaper-help">视频静音循环；后台标签页暂停播放，并尊重系统减少动态效果设置。MP4/WebM 通常更易播放，实际兼容性取决于编码。偏好只保存在当前浏览器、当前站点；登录后恢复。</p>
 <div id="wallpaperStatus" class="wallpaper-status" role="status"></div>
 </div><div class="wallpaper-actions"><button type="button" id="wallpaperReset" class="ghost">恢复默认</button><button type="button" id="wallpaperCancel" class="ghost">取消</button><button type="submit" class="primary">应用背景</button></div></form>
@@ -416,7 +452,7 @@ body.working button[data-action]{opacity:.6}
 (() => {
 'use strict';
 const $ = id => document.getElementById(id);
-const state = { auth:null,items:[],seen:new Set(),selected:new Set(),cursor:null,complete:false,busy:false,chip:'all',view:'all',limit:100,tiles:new Map(),folders:[],folderSelection:'all',editingFolderId:null,expandedFolders:new Set(),includeDescendants:false,deletingFolderId:null,folderBackend:'kv',listScope:'loaded',libraryTotal:null };
+const state = { auth:null,items:[],seen:new Set(),selected:new Set(),cursor:null,complete:false,busy:false,chip:'all',favorite:false,published:false,selectMode:false,sizeFilter:{},tagNames:[],limit:100,tiles:new Map(),folders:[],folderSelection:'all',editingFolderId:null,expandedFolders:new Set(),includeDescendants:false,deletingFolderId:null,folderBackend:'kv',listScope:'loaded',libraryTotal:null };
 const IMG = /\.(png|jpe?g|gif|webp|bmp|tiff?|ico|avif|apng)$/i;
 const VID = /\.(mp4|webm|mov|ogg|m4v|mkv|avi)$/i;
 const safeText = v => String(v ?? '');
@@ -427,7 +463,7 @@ const FILE_ORIGIN = IS_PREVIEW ? 'https://my-image-bed.pages.dev' : location.ori
 const publicFileUrl = id => FILE_ORIGIN + '/file/' + encodeURIComponent(id);
 const fileUrl = id => IS_PREVIEW ? '/api/studio/media/' + encodeURIComponent(id) : publicFileUrl(id);
 function toast(message){const el=$('toast');el.textContent=(/成功|完成|已复制/.test(message)?'✓  ':'●  ')+message;el.classList.remove('toast-visible');void el.offsetWidth;el.classList.add('toast-visible');clearTimeout(toast.timer);toast.timer=setTimeout(()=>el.classList.remove('toast-visible'),3600);}
-function setBusyUI(busy){document.querySelectorAll('#bulkbar [data-action],#selectPage,#selectAllMatched,#reload,#order').forEach(el=>el.disabled=busy);document.body.classList.toggle('working',busy);}
+function setBusyUI(busy){document.querySelectorAll('#bulkbar [data-action],#exportSelected,#clearSelection,#selectPage,#selectAllMatched,#reload,#order').forEach(el=>el.disabled=busy);document.body.classList.toggle('working',busy);}
 function authHeader(){return {'Authorization': 'Basic '+state.auth};}
 async function api(url,options={}){
   const r=await fetch(url,{...options,headers:{...authHeader(),...(options.headers||{})},cache:'no-store'});
@@ -441,22 +477,55 @@ function normalize(raw){
     tags:Array.isArray(m.tags)?m.tags.filter(x=>typeof x==='string'):[],
     albums:Array.isArray(m.albums)?m.albums.filter(x=>typeof x==='string'):[],category:m.category||'',width:m.width||null,height:m.height||null,description:typeof m.description==='string'?m.description:'',sourceUrl:typeof m.sourceUrl==='string'?m.sourceUrl:'',prompt:typeof m.prompt==='string'?m.prompt:'',folderId:typeof m.folderId==='string'?m.folderId:null,type:getType(id)};
 }
+function gallerySearchParams(){
+  const params=new URLSearchParams({limit:String(state.limit),order:$('order').value});
+  if(!state.assetDetailsEnabled)return params;
+  const filters={
+    q:$('search').value.trim(),tag:$('tagFilter').value,album:$('albumFilter').value,
+    view:state.chip,folder:state.folderSelection,descendants:state.includeDescendants?'true':'',
+    favorite:state.favorite?'true':'',published:state.published?'true':'',
+    ...(state.chip!=='video'?state.sizeFilter:{})
+  };
+  for(const [name,value] of Object.entries(filters))if(value)params.set(name,value);
+  return params;
+}
+let searchTimer;
+function requestGalleryRefresh(delay=0){
+  clearTimeout(searchTimer);
+  if(!state.assetDetailsEnabled){render();return;}
+  state.searchPending=true;
+  $('resultCount').textContent='检索中…';
+  $('selectPage').disabled=true;$('selectAllMatched').disabled=true;$('loadMore').disabled=true;
+  searchTimer=setTimeout(()=>{
+    if(state.busy){requestGalleryRefresh(120);return;}
+    loadPage(true,{preserveSelection:true});
+  },delay);
+}
 async function loadPage(reset=false,{preserveSelection=false}={}){
-  if(state.busy)return;
-  state.busy=true;$('order').disabled=true;$('loadMore').disabled=true;$('status').textContent='读取中...';
-  const skeleton=$('gallerySkeleton');
+  if(state.busy)return false;
+  state.busy=true;
+  $('order').disabled=true;$('loadMore').disabled=true;
+  $('status').textContent='读取中…';
+  const skeleton=$('gallerySkeleton'),grid=$('grid');
   skeleton.hidden=state.items.length>0||state.complete;
-  $('grid').setAttribute('aria-busy','true');
+  grid.setAttribute('aria-busy','true');
   try{
-    const p=new URLSearchParams({limit:String(state.limit),order:$('order').value});
+    const p=gallerySearchParams(),requestKey=p.toString();
+    if(state.galleryKey!==undefined&&state.galleryKey!==requestKey){reset=true;preserveSelection=true;}
     if(!reset&&state.cursor)p.set('cursor',state.cursor);
-    const r=await api('/api/manage/list?'+p);
+    const endpoint=state.assetDetailsEnabled?'/api/manage/search?':'/api/manage/list?';
+    const r=await api(endpoint+p);
+    if(state.assetDetailsEnabled&&gallerySearchParams().toString()!==requestKey)return false;
     if(reset){
       state.items=[];state.seen.clear();
       if(!preserveSelection)state.selected.clear();
-      state.tiles.clear();$('grid').replaceChildren();
+      state.tiles.clear();grid.replaceChildren();
     }
-    state.listScope=r.orderScope||'loaded';state.libraryTotal=typeof r.total==='number'?r.total:null;
+    state.galleryKey=requestKey;
+    state.searchPending=false;
+    state.listScope=r.backend==='d1'?'library':r.orderScope||'loaded';
+    state.libraryTotal=typeof r.total==='number'?r.total:null;
+    if(Array.isArray(r.tags))state.tagNames=r.tags;
     for(const record of r.keys||[]){
       if(!isSafeId(record.name)||state.seen.has(record.name))continue;
       state.seen.add(record.name);state.items.push(normalize(record));
@@ -464,12 +533,18 @@ async function loadPage(reset=false,{preserveSelection=false}={}){
     state.cursor=r.list_complete?null:(r.cursor||null);
     state.complete=Boolean(r.list_complete)||!state.cursor;
     render();renderFolders();
-    $('status').textContent=state.complete?'已经读取全部记录。':(state.listScope==='library'?'已按全库排序加载当前页；':'当前排序仅作用于已加载素材；')+'更多素材可继续加载或使用「全库检索」。';
+    $('status').textContent=state.complete?'':state.listScope==='library'?'可以继续加载全库匹配结果。':'当前只查已加载素材，可以继续加载。';
     return true;
-  }catch(e){toast(e.message);$('status').textContent='加载失败：'+e.message;return false;}
-  finally{
-    skeleton.hidden=true;$('grid').removeAttribute('aria-busy');
-    state.busy=false;$('order').disabled=false;$('loadMore').disabled=state.complete;
+  }catch(e){
+    $('resultCount').textContent='检索失败 · 保留已加载内容';
+    if(state.assetDetailsEnabled&&state.galleryKey===gallerySearchParams().toString())state.searchPending=false;
+    toast(e.message);$('status').textContent='加载失败：'+e.message;return false;
+  }finally{
+    skeleton.hidden=true;grid.removeAttribute('aria-busy');
+    state.busy=false;$('order').disabled=false;
+    $('loadMore').disabled=state.complete||Boolean(state.searchPending);
+    $('selectAllMatched').disabled=Boolean(state.searchPending);
+    updateSelectionUI(mediaViewport.items);
   }
 }
 
@@ -605,8 +680,7 @@ function renderFolders(){
       button.setAttribute('aria-level',String(level+1));
       button.setAttribute('aria-selected',String(state.folderSelection===folder.id));
       button.append(elt('span','folder-emoji',expanded&&hasChildren?'▤':'▥'),elt('span','folder-label',folder.name));
-      const count=state.items.filter(x=>x.folderId===folder.id).length;
-      if(count)button.append(elt('span','folder-count',String(count)));
+
       button.addEventListener('click',()=>selectFolder(folder.id));
       node.append(button);row.append(node);
       const childWrap=elt('div','folder-children'+(expanded?'':' hidden'));
@@ -633,9 +707,11 @@ function selectFolder(id){
   if(folderById(id))expandAncestors(id);
   $('editFolder').disabled=!folderById(id);
   $('deleteFolder').disabled=!folderById(id)||Boolean(state.deletingFolderId);
-  $('pageTitle').textContent=id==='all'?({all:'全部素材',image:'图片',video:'视频',favorites:'我的收藏',published:'AI 已发布'})[state.chip]||'全部素材'
+  $('pageTitle').textContent=id==='all'?({all:'全部素材',image:'图片',video:'视频',favorites:'我的收藏',published:'AI 已发布'})[currentNavigation()]||'全部素材'
     :id==='unfiled'?'未归类':folderById(id)?.name||'我的相册';
-  renderFolders();render();
+  renderFolders();
+  if(changed)requestGalleryRefresh();
+  else render();
 }
 // KV is eventually consistent. Keep confirmed writes visible in this tab while
 // edge list caches converge; a successful API response is authoritative for UI.
@@ -771,12 +847,23 @@ function openMoveDialog(){
 }
 function closeDialogs(){if($('folderEditor').open)$('folderEditor').close();if($('folderMoveDialog').open)$('folderMoveDialog').close();}
 
+function matchesSize(item){
+  if(!state.assetDetailsEnabled||state.chip==='video')return true;
+  const {orientation,min_width,min_height}=state.sizeFilter;
+  if(!orientation&&!min_width&&!min_height)return true;
+  const {width,height}=item;
+  if(item.type!=='image'||!(width>0&&height>0))return false;
+  if((min_width&&width<min_width)||(min_height&&height<min_height))return false;
+  return !orientation||(orientation==='landscape'?width>height:orientation==='portrait'?height>width:width===height);
+}
 function filterItems(){
   const q=$('search').value.trim().toLowerCase(),album=$('albumFilter').value,tag=$('tagFilter').value;
-  let result=state.items.filter(x=>inSelectedFolder(x)&&(state.chip==='all'||(state.chip==='favorites'?x.liked:state.chip==='published'?x.published:x.type===state.chip))
+  let result=state.items.filter(x=>inSelectedFolder(x)&&(state.chip==='all'||x.type===state.chip)
+    &&(!state.favorite||x.liked)&&(!state.published||x.published)&&matchesSize(x)
     &&(!album||x.albums.includes(album))
     &&(!tag||x.tags.includes(tag))
     &&(!q||[x.name,x.id,x.category,x.description,x.sourceUrl,x.prompt,...x.tags,...x.albums].join(' ').toLowerCase().includes(q)));
+  if(state.listScope==='library')return result;
   if($('order').value==='old')result.sort((a,b)=>a.date-b.date);
   else if($('order').value==='name')result.sort((a,b)=>a.name.localeCompare(b.name,'zh-CN'));
   else result.sort((a,b)=>b.date-a.date);
@@ -785,11 +872,15 @@ function filterItems(){
 function elt(tag,cls,text){const e=document.createElement(tag);if(cls)e.className=cls;if(text!==undefined)e.textContent=text;return e;}
 function updateSelectionUI(matches){
   const count=state.selected.size;
-  $('selectedInfo').textContent=count?'● 已选中 '+count+' 项':'点击查看大图 · 按住 Shift 滑过卡片可多选';
+  matches=matches||filterItems();
+  const visibleSelected=matches.filter(x=>state.selected.has(x.id)).length;
+  const outside=count-visibleSelected;
+  $('selectedInfo').textContent=count?'已选 '+count+' 项'+(outside?'（'+outside+' 项不在已显示结果中）':'')
+    :state.selectMode?'点击图片选择':'点击查看 · Shift 滑过可多选';
   $('selectedCount').textContent='已选 '+count+' 项';
   $('bulkbar').classList.toggle('hidden',count===0);
-  matches=matches||filterItems();
-  $('selectPage').textContent=matches.length&&matches.every(x=>state.selected.has(x.id))?'取消全选当前结果':'✓ 全选当前结果';
+  $('selectPage').textContent=matches.length&&visibleSelected===matches.length?'取消全选已显示':'全选已显示';
+  $('selectPage').disabled=state.busy||Boolean(state.searchPending)||!matches.length;
   for(const [id,tile] of state.tiles){
     const checked=state.selected.has(id);
     if(tile._check.checked!==checked)tile._check.checked=checked;
@@ -808,7 +899,7 @@ function saveGalleryView(){StudioGallery.save(window,galleryPreferences);applyGa
 function galleryGeometry(){
   const grid=$('grid'),width=grid.clientWidth;
   if(!mediaViewport.geometry||mediaViewport.width!==width||mediaViewport.layoutItems!==mediaViewport.items||mediaViewport.size!==galleryPreferences.size||mediaViewport.layoutRevision!==mediaViewport.revision){
-    mediaViewport.geometry=StudioJustified.layout(mediaViewport.items.map(x=>mediaViewport.ratios.get(x.id)||1),width,galleryPreferences.size,8);
+    mediaViewport.geometry=StudioJustified.layout(mediaViewport.items.map(x=>x.width>0&&x.height>0?x.width/x.height:mediaViewport.ratios.get(x.id)||1),width,galleryPreferences.size,8);
     mediaViewport.width=width;mediaViewport.layoutItems=mediaViewport.items;mediaViewport.size=galleryPreferences.size;mediaViewport.layoutRevision=mediaViewport.revision;
   }
   return mediaViewport.geometry;
@@ -861,20 +952,90 @@ function extendGallerySelection(id){
   sweepAnchor={items,index:end};
   updateSelectionUI(items);
 }
+// Keep small, decoded-ready derivatives only in this tab, with a bounded memory budget.
+const galleryThumbnails=new Map();
+const thumbnailQueue=new Map();
+let thumbnailBytes=0,thumbnailScheduled=false;
+const thumbnailLimit=6*1024*1024;
+function useGalleryThumbnail(img,blob){
+  const url=URL.createObjectURL(blob);
+  const release=()=>{
+    URL.revokeObjectURL(url);
+    img.removeEventListener('load',release);
+    img.removeEventListener('error',release);
+  };
+  img.addEventListener('load',release);
+  img.addEventListener('error',release);
+  img.dataset.thumbnail='true';
+  img.loading='eager';
+  img.src=url;
+}
+function rememberGalleryThumbnail(id,blob){
+  galleryThumbnails.set(id,blob);
+  thumbnailBytes+=blob.size;
+  while(thumbnailBytes>thumbnailLimit||galleryThumbnails.size>120){
+    const leastRecent=galleryThumbnails.keys().next().value;
+    thumbnailBytes-=galleryThumbnails.get(leastRecent).size;
+    galleryThumbnails.delete(leastRecent);
+  }
+}
+function generateNextThumbnail(){
+  if(thumbnailScheduled||!thumbnailQueue.size)return;
+  thumbnailScheduled=true;
+  const run=()=>{
+    const [id,img]=thumbnailQueue.entries().next().value;
+    thumbnailQueue.delete(id);
+    const finish=()=>{thumbnailScheduled=false;generateNextThumbnail();};
+    if(!/\.jpe?g$/i.test(id)||!img.isConnected||!img.complete||img.dataset.thumbnail||galleryThumbnails.has(id)){finish();return;}
+    const w=img.naturalWidth,h=img.naturalHeight;
+    const source=img.src,scale=640/Math.max(w,h);
+    if(!w||!h||scale>=1||w*h>24000000){finish();return;}
+    try{
+      const canvas=document.createElement('canvas');
+      canvas.width=Math.max(1,Math.round(w*scale));canvas.height=Math.max(1,Math.round(h*scale));
+      canvas.getContext('2d').drawImage(img,0,0,canvas.width,canvas.height);
+      canvas.toBlob(blob=>{
+        canvas.width=0;canvas.height=0;
+        if(blob&&blob.size<=180*1024){
+          rememberGalleryThumbnail(id,blob);
+          if(img.isConnected&&img.src===source)useGalleryThumbnail(img,blob);
+        }
+        finish();
+      },'image/webp',.8);
+    }catch{ finish(); }
+  };
+  if(typeof requestIdleCallback==='function')requestIdleCallback(run,{timeout:700});
+  else setTimeout(run,30);
+}
+function mountGalleryImage(img,item,retry=false){
+  const cached=galleryThumbnails.get(item.id);
+  if(cached){
+    galleryThumbnails.delete(item.id);
+    if(!retry){galleryThumbnails.set(item.id,cached);useGalleryThumbnail(img,cached);return;}
+    thumbnailBytes-=cached.size;
+  }
+  delete img.dataset.thumbnail;
+  img.loading='lazy';
+  img.src=fileUrl(item.id)+(retry?'?retry='+Date.now():'');
+}
 function createTile(x){
   const tile=elt('article','tile');tile.tabIndex=0;tile.dataset.mediaId=x.id;tile.setAttribute('aria-label','查看 '+x.name);
   const media=elt('div','media');
   if(x.type==='image'){
     const img=elt('img');img.alt='';img.loading='lazy';img.decoding='async';img.fetchPriority='low';
     img.addEventListener('load',()=>{
+      if(img.dataset.thumbnail)return;
       const ratio=img.naturalWidth/img.naturalHeight;
       if(Number.isFinite(ratio)&&ratio>0&&mediaViewport.ratios.get(x.id)!==ratio){mediaViewport.ratios.set(x.id,ratio);mediaViewport.revision++;scheduleMediaWindow();}
+      if(thumbnailQueue.size<32&&Math.max(img.naturalWidth,img.naturalHeight)>640){
+        thumbnailQueue.set(x.id,img);generateNextThumbnail();
+      }
     });
-    img.src=fileUrl(x.id);
+    mountGalleryImage(img,x);
     const fallback=elt('div','broken hidden');
     fallback.append(elt('span','broken-icon','⚠'),elt('span','broken-label','图片暂时无法加载'));
     const retry=elt('button','retry','重新加载');retry.type='button';
-    retry.addEventListener('click',e=>{e.stopPropagation();fallback.classList.add('hidden');img.classList.remove('hidden');img.src=fileUrl(x.id)+'?retry='+Date.now();});
+    retry.addEventListener('click',e=>{e.stopPropagation();fallback.classList.add('hidden');img.classList.remove('hidden');mountGalleryImage(img,x,true);});
     fallback.append(retry);
     img.addEventListener('error',()=>{img.classList.add('hidden');fallback.classList.remove('hidden');});
     media.append(img,fallback);
@@ -886,21 +1047,21 @@ function createTile(x){
   }else media.append(elt('span','fileicon','▤'));
   const check=elt('input','check');check.type='checkbox';check.setAttribute('aria-label','选择 '+x.name);
   check.addEventListener('click',e=>e.stopPropagation());
-  check.addEventListener('change',()=>select(x.id,check.checked));media.append(check);
+  check.addEventListener('change',()=>{if(state.busy||state.searchPending)check.checked=state.selected.has(x.id);else select(x.id,check.checked);});media.append(check);
   const tags=elt('div','tags');media.append(tags);tile.append(media);
   const details=elt('div','details');
   const filename=elt('div','filename',x.name),sub=elt('div','sub');
   details.append(filename,sub);tile.append(details);
   tile._check=check;tile._tags=tags;tile._filename=filename;tile._sub=sub;
   tile.addEventListener('pointerenter',event=>{
-    if(event.pointerType==='mouse'&&event.shiftKey&&!$('preview').open)extendGallerySelection(x.id);
+    if(!state.busy&&!state.searchPending&&event.pointerType==='mouse'&&event.shiftKey&&!$('preview').open)extendGallerySelection(x.id);
   });
-  tile.addEventListener('click',event=>{if(event.shiftKey){extendGallerySelection(x.id);return;}const latest=state.items.find(v=>v.id===x.id);if(latest)preview(latest);});
-  tile.addEventListener('keydown',e=>{if(e.target===tile&&navigateMedia(x.id,e.key)){e.preventDefault();return;}if(e.key==='Enter'&&e.target===tile){const latest=state.items.find(v=>v.id===x.id);if(latest)preview(latest);}});
+  tile.addEventListener('click',event=>{if(state.busy||state.searchPending)return;if(event.shiftKey){extendGallerySelection(x.id);return;}if(state.selectMode){select(x.id,!state.selected.has(x.id));return;}const latest=state.items.find(v=>v.id===x.id);if(latest)preview(latest);});
+  tile.addEventListener('keydown',e=>{if(e.target===tile&&navigateMedia(x.id,e.key)){e.preventDefault();return;}if(e.target===tile&&(e.key===' '||state.selectMode&&e.key==='Enter')){e.preventDefault();if(!state.busy&&!state.searchPending)select(x.id,!state.selected.has(x.id));return;}if(e.key==='Enter'&&e.target===tile){const latest=state.items.find(v=>v.id===x.id);if(latest)preview(latest);}});
   return tile;
 }
 function refreshTile(tile,x){
-  tile.setAttribute('aria-label','查看 '+x.name);tile._check.setAttribute('aria-label','选择 '+x.name);
+  tile.setAttribute('aria-label',(state.selectMode?'选择 ':'查看 ')+x.name);tile._check.setAttribute('aria-label','选择 '+x.name);
   const image=tile.querySelector('img');if(image)image.alt=x.name;
   tile._filename.textContent=x.name;
   tile._sub.textContent=[x.category||x.type.toUpperCase(),formatBytes(x.bytes),...x.albums.slice(0,1)].filter(Boolean).join(' · ');
@@ -919,18 +1080,18 @@ function render(){
   if(albumSelect.dataset.signature!==signature){
     albumSelect.replaceChildren(new Option('旧版相册标签',''));
     for(const a of albums)albumSelect.add(new Option(a,a));
-    albumSelect.value=albums.includes(chosen)?chosen:'';
+    if(chosen&&!albums.includes(chosen))albumSelect.add(new Option(chosen,chosen));
+    albumSelect.value=chosen;
     albumSelect.dataset.signature=signature;
   }
-  albumSelect.classList.toggle('hidden',albums.length===0);
-  $('resultCount').textContent='当前匹配 '+list.length+' 项 · 已加载 '+state.items.length+' 项'+(state.listScope==='library'&&state.libraryTotal!==null?' / 索引库共 '+state.libraryTotal+' 项':'');
-  $('statAll').textContent=state.items.length;
-  $('statFavorite').textContent=state.items.filter(x=>x.liked).length;
-  $('statAI').textContent=state.items.filter(x=>x.published).length;
+  albumSelect.classList.toggle('hidden',albums.length===0&&!chosen);
+  $('resultCount').textContent=state.listScope==='library'&&state.libraryTotal!==null
+    ?'全库匹配 '+state.libraryTotal+' 项'+(list.length<state.libraryTotal?' · 已显示 '+list.length+' 项':'')
+    :'当前已加载 '+state.items.length+' 项 · 匹配 '+list.length+' 项';
   $('loadMore').classList.toggle('hidden',state.complete);
   $('selectAllMatched').classList.toggle('hidden',state.complete);
   if(!list.length){
-    mediaViewport.items=[];mediaViewport.key=null;state.tiles.clear();grid.classList.remove('virtualized');grid.style.height='';mediaViewport.geometry=null;grid.setAttribute('aria-live','polite');
+    mediaViewport.items=[];mediaViewport.key=null;state.tiles.clear();grid.classList.remove('virtualized');grid.style.height='';mediaViewport.geometry=null;
     grid.replaceChildren(elt('div','empty',folderById(state.folderSelection)&&folderChildren(state.folderSelection).length&&!state.includeDescendants?'当前相册没有直接存放的素材。可以打开上面的子文件夹，或者开启「包含子文件夹素材」。':'没有匹配的素材。请调整搜索或筛选条件。'));
     updateSelectionUI(list);return;
   }
@@ -939,16 +1100,34 @@ function render(){
 }
 function formatBytes(n){return n>=1048576?(n/1048576).toFixed(1)+' MB':n>=1024?(n/1024).toFixed(1)+' KB':n+' B';}
 function select(id,checked){checked?state.selected.add(id):state.selected.delete(id);updateSelectionUI(mediaViewport.items);}
-function setChip(chip){
-  state.chip=chip;
+function currentNavigation(){
+  return state.published?'published':state.favorite?'favorites':state.chip;
+}
+function syncGalleryChips(){
   $('chips').querySelectorAll('[data-chip]').forEach(button=>{
-    const active=button.dataset.chip===chip;
+    const key=button.dataset.chip;
+    const active=key==='favorites'?state.favorite:key==='published'?state.published:key===state.chip;
     button.classList.toggle('on',active);
     button.setAttribute('aria-pressed',String(active));
   });
-  document.querySelectorAll('.nav').forEach(el=>el.classList.toggle('active',el.dataset.view===chip));
-  if(state.folderSelection==='all')$('pageTitle').textContent=({all:'全部素材',image:'图片',video:'视频',favorites:'我的收藏',published:'AI 已发布'})[chip]||'全部素材';
-  render();
+  const nav=currentNavigation();
+  document.querySelectorAll('.nav').forEach(button=>{
+    const active=button.dataset.view===nav;
+    button.classList.toggle('active',active);
+    if(active)button.setAttribute('aria-current','true');else button.removeAttribute('aria-current');
+  });
+  if(state.folderSelection==='all')$('pageTitle').textContent=({all:'全部素材',image:'图片',video:'视频',favorites:'我的收藏',published:'AI 已发布'})[nav]||'全部素材';
+  $('dimensionFilters').hidden=!state.assetDetailsEnabled||state.chip==='video';
+}
+function setChip(chip,{navigate=false}={}){
+  if(navigate){
+    state.favorite=chip==='favorites';state.published=chip==='published';
+    state.chip=state.favorite||state.published?'all':chip;
+  }else if(chip==='favorites')state.favorite=!state.favorite;
+  else if(chip==='published')state.published=!state.published;
+  else state.chip=chip;
+  syncGalleryChips();
+  requestGalleryRefresh();
 }
 const indexScan={cursor:null,pages:0,keys:0,media:0,changed:0,complete:false,running:false,controller:null,statsGeneration:0};
 function saveIndexCheckpoint(){
@@ -1157,7 +1336,9 @@ function detailDirty(){
 function closeDetails(){
   if(detailSession?.busy){toast('正在保存，请稍候');return;}
   if(detailDirty()&&!confirm('资料尚未保存，确定放弃修改并关闭？'))return;
+  const galleryChanged=detailSession?.galleryChanged;
   $('preview').close();detailSession=null;
+  if(galleryChanged)requestGalleryRefresh();
 }
 async function detailWrite(action,payload={}){
   const d=detailSession;if(!d||d.busy)return false;
@@ -1169,7 +1350,7 @@ async function detailWrite(action,payload={}){
     const m=result.metadata;
     if(action!=='edit_details'&&m.metadataVersion===d.x.metadataVersion+1&&d.baseVersion===d.x.metadataVersion)d.baseVersion=m.metadataVersion;
     Object.assign(d.x,{...(m.width&&m.height?{width:m.width,height:m.height}:{}),metadataVersion:m.metadataVersion,name:m.fileName||d.x.name,liked:m.liked,published:m.aiPublished,tags:m.tags,albums:m.albums,category:m.category,folderId:m.folderId||null,...Object.fromEntries(['description','sourceUrl','prompt'].filter(k=>typeof m[k]==='string').map(k=>[k,m[k]]))});
-    render();renderFolders();if(typeof renderCatalogResults==='function'){renderCatalogResults();if($('catalogDialog')?.open)$('catalogStatus').textContent='资料已更新，重新检索可刷新匹配结果和数量。';}d.message.textContent=detailDirty()?'此操作已保存；资料仍有未保存修改':'已保存';return true;
+    render();renderFolders();if(typeof renderCatalogResults==='function'){renderCatalogResults();if($('catalogDialog')?.open)$('catalogStatus').textContent='资料已更新，重新检索可刷新匹配结果和数量。';}d.galleryChanged=true;d.message.textContent=detailDirty()?'此操作已保存；资料仍有未保存修改':'已保存';return true;
   }catch(error){d.message.textContent='保存失败：'+error.message;return false;}
   finally{d.busy=false;d.fields.disabled=false;}
 }
@@ -1287,7 +1468,7 @@ function preview(x){
         animateTagRemoval(position);
         (chips.querySelector('button')||d.addInput)?.focus();
       });
-      find.addEventListener('click',()=>{if(detailDirty()&&!confirm('按标签筛选会关闭详情并放弃未保存修改，继续？'))return;if(![...$('tagFilter').options].some(option=>option.value===tag))$('tagFilter').add(new Option(tag,tag));$('tagFilter').value=tag;$('preview').close();detailSession=null;render();});
+      find.addEventListener('click',()=>{if(detailDirty()&&!confirm('按标签筛选会关闭详情并放弃未保存修改，继续？'))return;if(![...$('tagFilter').options].some(option=>option.value===tag))$('tagFilter').add(new Option(tag,tag));$('tagFilter').value=tag;$('preview').close();detailSession=null;requestGalleryRefresh();});
       chip.append(name,find,remove);chips.append(chip);
     }
   }
@@ -1394,7 +1575,7 @@ function collectTagChoices(items,selected,action){
 }
 function updateTagFilter(){
   const select=$('tagFilter'),chosen=select.value;
-  const names=collectTagChoices(state.items,state.selected,'add_tags').map(x=>x.name);
+  const names=[...new Set([...state.tagNames,...collectTagChoices(state.items,state.selected,'add_tags').map(x=>x.name)])].sort((a,b)=>a.localeCompare(b,'zh-CN'));
   if(chosen&&!names.includes(chosen))names.push(chosen);
   const signature=JSON.stringify(names);
   if(select.dataset.signature!==signature){
@@ -1477,21 +1658,29 @@ async function runAction(action,override=null){
     $('status').textContent='操作完成：成功 '+ok+' 项，失败 '+fail+' 项。'+(fail?'失败项目仍保持选中，可重试。':'')+[...failureMessages].slice(0,3).join('；');
     toast('操作完成：成功 '+ok+' 项，失败 '+fail+' 项');
   }catch(e){toast('操作中断：'+e.message);$('status').textContent='已确认成功 '+ok+' 项；其余 '+pending.size+' 项保留选中，可重试。中断的请求可能已生效。';}
-  finally{state.selected=new Set(pending);state.busy=false;setBusyUI(false);render();renderFolders();}
+  finally{state.selected=new Set(pending);state.busy=false;setBusyUI(false);render();renderFolders();if(state.assetDetailsEnabled)requestGalleryRefresh();}
 }
 async function selectAllMatching(){
-  if(state.busy)return;
+  if(state.busy||state.searchPending)return;
   if(!confirm('将读取全部剩余页面并选中匹配当前筛选条件的素材。素材很多时可能需要较多请求，确定吗？'))return;
+  const queryKey=gallerySearchParams().toString();
   let pages=0;
   while(!state.complete&&pages<100){
     const loaded=await loadPage();pages++;
     if(!loaded)break;
   }
+  if(queryKey!==gallerySearchParams().toString())return;
   for(const x of filterItems())state.selected.add(x.id);
   updateSelectionUI();
   $('status').textContent='已经选中 '+state.selected.size+' 项。'+(!state.complete?' 为限制请求，最多自动加载 100 页；还有记录未加载。':'');
 }
-function showUploadFeedback(message){$('uploadFeedbackMessage').textContent=message;$('uploadFeedback').classList.remove('hidden');}
+function showUploadFeedback(message,title='上传任务',{collapsed=false}={}){
+  $('uploadFeedbackMessage').textContent=message;
+  const feedback=$('uploadFeedback'),heading=$('uploadFeedbackTitle');
+  if(heading)heading.textContent=title;
+  feedback.classList.remove('hidden');
+  feedback.open=!collapsed;
+}
 async function upload(files){
   if(state.busy||!files?.length||IS_PREVIEW)return;
   if(!confirm('上传 '+files.length+' 个文件到图床？新素材不会自动收藏或发布给 AI。'))return;
@@ -1521,7 +1710,7 @@ async function upload(files){
     }
   }finally{state.busy=false;setBusyUI(false);$('uploadBtn').disabled=IS_PREVIEW;}
   const summary='上传处理结束：成功 '+good+' 项，失败或未确认 '+failed+' 项。'+(good?'新素材位于未归类。':'')+(errors.length?'\n'+errors.slice(0,3).join('\n'):'')+(warnings.length?'\n'+warnings.slice(0,3).join('\n'):'');
-  showUploadFeedback(summary);toast('上传成功 '+good+'，失败或未确认 '+failed);
+  showUploadFeedback(summary,'上传完成：'+good+' 项成功'+(failed?'，'+failed+' 项待确认':''),{collapsed:!failed});toast('上传成功 '+good+'，失败或未确认 '+failed);
   await loadPage(true);
   // A newly uploaded KV key may not be visible in list() yet. Keep only
   // server-confirmed records in memory so the upload does not appear to vanish.
@@ -1535,16 +1724,48 @@ const wallpaper=StudioWallpaper.create({host:window,layer:$('wallpaperLayer'),co
   $('wallpaperStatus').textContent=result.message;
 }});
 function startWallpaper(){wallpaperConfig=StudioWallpaper.read(window);wallpaper.apply(wallpaperConfig);}
+const wallpaperCatalog={items:[],cursor:null,version:0,loading:false,criteria:'',timer:0,error:''};
 function wallpaperChoices(){
   const type=$('wallpaperType').value,query=$('wallpaperSearch').value.trim().toLocaleLowerCase(),select=$('wallpaperAsset'),chosen=wallpaperDraft.id;
-  const eligible=state.items.filter(x=>StudioWallpaper.mediaType(x.id)===type);
-  const matches=eligible.filter(x=>x.name.toLocaleLowerCase().includes(query));
-  select.replaceChildren(new Option('请选择素材',''));
-  if(chosen&&!eligible.some(x=>x.id===chosen)&&StudioWallpaper.mediaType(chosen)===type)select.add(new Option('当前壁纸（不在已加载列表中）',chosen));
+  const source=state.assetDetailsEnabled?wallpaperCatalog.items:state.items;
+  const eligible=source.filter(x=>StudioWallpaper.mediaType(x.id)===type);
+  const matches=eligible.filter(x=>state.assetDetailsEnabled||x.name.toLocaleLowerCase().includes(query));
+  select.replaceChildren(new Option(wallpaperCatalog.loading?'正在读取素材…':'请选择素材',''));
+  if(chosen&&StudioWallpaper.mediaType(chosen)===type&&!matches.some(x=>x.id===chosen)){
+    select.add(new Option(eligible.find(x=>x.id===chosen)?.name||'当前已选素材',chosen));
+  }
   for(const x of matches)select.add(new Option(x.name,x.id));
-  if(chosen&&eligible.some(x=>x.id===chosen)&&!matches.some(x=>x.id===chosen)){const x=eligible.find(x=>x.id===chosen);select.add(new Option('已选：'+x.name,chosen));}
   select.value=chosen;$('wallpaperOptions').classList.toggle('hidden',type==='default');
-  $('wallpaperMore').classList.toggle('hidden',state.complete);$('wallpaperMore').disabled=state.busy;
+  $('wallpaperMore').classList.toggle('hidden',state.assetDetailsEnabled?!wallpaperCatalog.cursor:state.complete);
+  $('wallpaperMore').disabled=state.busy||wallpaperCatalog.loading;
+  if(state.assetDetailsEnabled&&type!=='default'){
+    const status=$('wallpaperPickerStatus');
+    status.textContent=wallpaperCatalog.error||(!wallpaperCatalog.loading&&!matches.length?'没有匹配素材':'');
+  }
+}
+async function loadWallpaperChoices(reset=true){
+  if(!state.assetDetailsEnabled){wallpaperChoices();return;}
+  const view=$('wallpaperType').value;
+  const q=$('wallpaperSearch').value.trim().slice(0,256);
+  const criteria=JSON.stringify([view,q]);
+  if(!reset&&(!wallpaperCatalog.cursor||wallpaperCatalog.loading||wallpaperCatalog.criteria!==criteria))return;
+  const version=++wallpaperCatalog.version;
+  if(reset){wallpaperCatalog.items=[];wallpaperCatalog.cursor=null;}
+  wallpaperCatalog.criteria=criteria;wallpaperCatalog.error='';
+  if(view==='default'){wallpaperCatalog.loading=false;wallpaperChoices();return;}
+  wallpaperCatalog.loading=true;wallpaperChoices();
+  try{
+    const params=new URLSearchParams({view,q,limit:'50'});
+    if(wallpaperCatalog.cursor)params.set('cursor',wallpaperCatalog.cursor);
+    const result=await api('/api/manage/search?'+params);
+    if(version!==wallpaperCatalog.version)return;
+    wallpaperCatalog.items.push(...result.keys.filter(x=>isSafeId(x.name)).map(normalize));
+    wallpaperCatalog.cursor=result.cursor;
+  }catch(error){
+    if(version===wallpaperCatalog.version)wallpaperCatalog.error='读取失败：'+error.message;
+  }finally{
+    if(version===wallpaperCatalog.version){wallpaperCatalog.loading=false;wallpaperChoices();}
+  }
 }
 $('recoverUploadOpen').addEventListener('click',()=>{$('recoverUploadStatus').textContent='';$('recoverUploadConfirm').checked=false;$('recoverUploadDialog').showModal();});
 $('recoverUploadClose').addEventListener('click',()=>$('recoverUploadDialog').close());
@@ -1571,13 +1792,16 @@ $('recordSync').addEventListener('click',async()=>{
 $('wallpaperOpen').addEventListener('click',()=>{
   wallpaperDraft={...wallpaperConfig};$('wallpaperType').value=wallpaperDraft.type;$('wallpaperSearch').value='';
   $('wallpaperMask').value=wallpaperDraft.mask;$('wallpaperMaskValue').value=wallpaperDraft.mask+'%';$('wallpaperSurface').value=wallpaperDraft.surface;$('wallpaperSurfaceValue').value=wallpaperDraft.surface+'%';
-  wallpaperChoices();$('wallpaperDialog').showModal();
+  $('wallpaperDialog').showModal();loadWallpaperChoices();
 });
-$('wallpaperType').addEventListener('change',()=>{wallpaperDraft.type=$('wallpaperType').value;if(StudioWallpaper.mediaType(wallpaperDraft.id)!==wallpaperDraft.type)wallpaperDraft.id='';wallpaperDraft.paused=false;wallpaperChoices();});
-$('wallpaperSearch').addEventListener('input',wallpaperChoices);
+$('wallpaperType').addEventListener('change',()=>{wallpaperDraft.type=$('wallpaperType').value;if(StudioWallpaper.mediaType(wallpaperDraft.id)!==wallpaperDraft.type)wallpaperDraft.id='';wallpaperDraft.paused=false;loadWallpaperChoices();});
+$('wallpaperSearch').addEventListener('input',()=>{
+  clearTimeout(wallpaperCatalog.timer);
+  wallpaperCatalog.timer=setTimeout(loadWallpaperChoices,220);
+});
 $('wallpaperAsset').addEventListener('change',()=>{wallpaperDraft.id=$('wallpaperAsset').value;});
 for(const [id,key] of [['wallpaperMask','mask'],['wallpaperSurface','surface']])$(id).addEventListener('input',e=>{wallpaperDraft[key]=Number(e.target.value);$(id+'Value').value=e.target.value+'%';});
-$('wallpaperMore').addEventListener('click',async()=>{try{$('wallpaperMore').disabled=true;await loadPage();}finally{wallpaperChoices();}});
+$('wallpaperMore').addEventListener('click',async()=>{if(state.assetDetailsEnabled)await loadWallpaperChoices(false);else{try{$('wallpaperMore').disabled=true;await loadPage();}finally{wallpaperChoices();}}});
 function commitWallpaper(config){
   wallpaperConfig=StudioWallpaper.normalize(config);const saved=StudioWallpaper.save(window,wallpaperConfig);wallpaper.apply(wallpaperConfig);
   $('wallpaperDialog').close();toast(saved?'背景设置已应用。':'背景已应用；浏览器禁止存储，本次设置无法记忆。');
@@ -1610,11 +1834,12 @@ $('loginForm').addEventListener('submit',async e=>{
     try{json=JSON.parse(body);}
     catch{throw Error('后台返回的不是 JSON，请检查 Preview 的 KV 绑定和 Pages Functions。响应开头：'+body.slice(0,70));}
     if(!Array.isArray(json.keys))throw Error('图床后台返回的数据格式不正确，请检查 KV 配置。');
-    $('globalSearchOpen').disabled=true;$('tagManagerOpen').disabled=true;$('indexMaintenanceOpen').disabled=true;
-    $('recoverUploadOpen').disabled=!json.durableUploads;state.assetDetailsEnabled=Boolean(json.catalogReady);state.auth=candidate;$('pass').value='';$('auth').classList.add('hidden');$('app').classList.remove('hidden');if(IS_PREVIEW){$('uploadBtn').disabled=true;$('uploadBtn').title='预览环境仅同步正式图片目录，不允许上传，避免测试数据和真实 Telegram 存储混用';}await loadFolders();await loadPage();startWallpaper();$('globalSearchOpen').disabled=!json.catalogReady;$('tagManagerOpen').disabled=!json.catalogReady;$('indexMaintenanceOpen').disabled=!json.catalogReady;$('globalSearchOpen').title=json.catalogReady?'按全库索引检索，不必先加载所有页面':'当前环境的全库索引尚未启用';
+    $('tagManagerOpen').disabled=true;$('indexMaintenanceOpen').disabled=true;
+    $('recoverUploadOpen').disabled=!json.durableUploads;state.assetDetailsEnabled=Boolean(json.catalogReady);
+    $('search').placeholder=state.assetDetailsEnabled?'搜索全库文件名、标签…':'搜索已加载素材…';
+    state.auth=candidate;$('pass').value='';$('auth').classList.add('hidden');$('app').classList.remove('hidden');if(IS_PREVIEW){$('uploadBtn').disabled=true;$('uploadBtn').title='预览环境仅同步正式图片目录，不允许上传，避免测试数据和真实 Telegram 存储混用';}await loadFolders();await loadPage();startWallpaper();syncGalleryChips();$('tagManagerOpen').disabled=!json.catalogReady;$('indexMaintenanceOpen').disabled=!json.catalogReady;
   }catch(err){$('loginError').textContent=err.message;}
 });
-$('globalSearchOpen').addEventListener('click',openCatalog);
 $('tagManagerOpen').addEventListener('click',openTagManager);
 $('indexMaintenanceOpen').addEventListener('click',openIndexMaintenance);
 $('indexMaintenanceClose').addEventListener('click',closeIndexMaintenance);
@@ -1639,7 +1864,7 @@ $('catalogDialog').addEventListener('cancel',()=>{catalogSearch.controller?.abor
 $('catalogForm').addEventListener('submit',event=>{event.preventDefault();searchCatalog(true);});
 $('catalogMore').addEventListener('click',()=>searchCatalog(false));
 $('catalogSelectPage').addEventListener('click',()=>{const all=catalogSearch.items.length&&catalogSearch.items.every(x=>state.selected.has(x.id));for(const item of catalogSearch.items)all?state.selected.delete(item.id):state.selected.add(item.id);updateSelectionUI();renderCatalogResults();});
-$('includeDescendants').addEventListener('change',e=>{state.includeDescendants=e.target.checked;render();});
+$('includeDescendants').addEventListener('change',e=>{state.includeDescendants=e.target.checked;requestGalleryRefresh();});
 $('folderMobile').addEventListener('change',e=>selectFolder(e.target.value));
 $('folderAll').addEventListener('click',()=>selectFolder('all'));
 $('folderUnfiled').addEventListener('click',()=>selectFolder('unfiled'));
@@ -1686,17 +1911,19 @@ sidebarToggle.addEventListener('click',()=>{
 window.addEventListener('scroll',scheduleMediaWindow,{passive:true});
 window.addEventListener('resize',scheduleMediaWindow);
 if(typeof ResizeObserver!=='undefined')new ResizeObserver(scheduleMediaWindow).observe($('grid'));
-let searchTimer; $('search').addEventListener('input',()=>{clearTimeout(searchTimer);searchTimer=setTimeout(render,110);});
-$('tagFilter').addEventListener('change',render);
+$('search').addEventListener('input',event=>{if(!event.isComposing)requestGalleryRefresh(240);});
+$('search').addEventListener('compositionend',()=>requestGalleryRefresh(240));
+$('tagFilter').addEventListener('change',()=>requestGalleryRefresh());
 $('tagSearch').addEventListener('input',renderTagChoices);
 $('tagForm').addEventListener('submit',saveTags);
 $('tagClose').addEventListener('click',()=>$('tagDialog').close());
 $('tagCancel').addEventListener('click',()=>$('tagDialog').close());
-$('albumFilter').addEventListener('change',render);
+$('albumFilter').addEventListener('change',()=>requestGalleryRefresh());
 $('order').addEventListener('change',()=>loadPage(true,{preserveSelection:true}));
 $('chips').addEventListener('click',e=>{const b=e.target.closest('[data-chip]');if(b)setChip(b.dataset.chip);});
-document.querySelectorAll('.nav').forEach(b=>b.addEventListener('click',()=>setChip(b.dataset.view)));
+document.querySelectorAll('.nav').forEach(b=>b.addEventListener('click',()=>setChip(b.dataset.view,{navigate:true})));
 $('selectPage').addEventListener('click',()=>{
+  if(state.busy||state.searchPending)return;
   const matches=filterItems();const all=matches.every(x=>state.selected.has(x.id));
   matches.forEach(x=>all?state.selected.delete(x.id):state.selected.add(x.id));updateSelectionUI();
 });
@@ -1704,7 +1931,48 @@ $('clearSelection').addEventListener('click',()=>{state.selected.clear();updateS
 $('bulkbar').addEventListener('click',e=>{const b=e.target.closest('[data-action]');if(b)runAction(b.dataset.action);});
 $('loadMore').addEventListener('click',()=>loadPage());
 $('selectAllMatched').addEventListener('click',selectAllMatching);
-$('clearFilter').addEventListener('click',()=>{$('search').value='';$('albumFilter').value='';$('tagFilter').value='';setChip('all');});
+function updateSizeBadge(){
+  const count=Object.keys(state.sizeFilter).length,badge=$('sizeFilterCount');
+  badge.hidden=!count;badge.textContent=count;
+}
+function resetSize(){
+  for(const id of ['orientationFilter','minWidth','minHeight'])$(id).value='';
+  state.sizeFilter={};updateSizeBadge();
+}
+$('applySize').addEventListener('click',()=>{
+  if(!['minWidth','minHeight'].every(id=>$(id).reportValidity()))return;
+  state.sizeFilter=Object.fromEntries([
+    ['orientation',$('orientationFilter').value],['min_width',Number($('minWidth').value)],['min_height',Number($('minHeight').value)]
+  ].filter(([,value])=>value));
+  updateSizeBadge();$('dimensionFilters').open=false;$('dimensionFilters').querySelector('summary').focus();
+  requestGalleryRefresh();
+});
+$('clearSize').addEventListener('click',()=>{resetSize();$('dimensionFilters').open=false;$('dimensionFilters').querySelector('summary').focus();requestGalleryRefresh();});
+$('selectMode').addEventListener('click',()=>{
+  state.selectMode=!state.selectMode;$('selectMode').setAttribute('aria-pressed',String(state.selectMode));
+  $('selectMode').textContent=state.selectMode?'退出多选':'多选';
+  $('grid').classList.toggle('select-mode',state.selectMode);
+  render();
+});
+$('clearFilter').addEventListener('click',()=>{
+  $('search').value='';$('albumFilter').value='';$('tagFilter').value='';
+  resetSize();setChip('all',{navigate:true});
+});
+for(const id of ['studioTools','bulkTools','dimensionFilters']){
+  const menu=$(id);
+  menu.addEventListener('keydown',event=>{
+    if(event.key==='Escape'&&menu.open){menu.open=false;menu.querySelector('summary').focus();}
+  });
+  if(id!=='dimensionFilters')menu.addEventListener('click',event=>{
+    if(event.target.closest('button')){
+      menu.open=false;
+      if(!document.querySelector('dialog[open]'))menu.querySelector('summary').focus();
+    }
+  });
+}
+document.addEventListener('pointerdown',event=>{
+  for(const menu of document.querySelectorAll('.studio-menu[open]'))if(!menu.contains(event.target))menu.open=false;
+});
 window.addEventListener('keyup',event=>{if(event.key==='Shift')sweepAnchor=null;});
 window.addEventListener('blur',()=>{sweepAnchor=null;});
 const previewDialog=$('preview');

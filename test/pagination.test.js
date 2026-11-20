@@ -62,7 +62,7 @@ describe('KV list pagination', function () {
     const res = await onRequest({ request, env });
     const data = JSON.parse(await res.text());
 
-    assert.deepStrictEqual(data, { keys: [], list_complete: true });
+    assert.deepStrictEqual(data, { keys: [], list_complete: true, orderScope:'loaded' });
     assert.deepStrictEqual(observedOptions, {
       limit: 1000,
       cursor: undefined,

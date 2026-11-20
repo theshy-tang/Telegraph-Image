@@ -377,3 +377,151 @@ button.upload-tile:not(:disabled):hover, button.upload-tile.drag-over {
 @media (max-width: 900px) {
   .sidebar-heading { margin: 0; flex: none; }
 }
+
+/* Compact gallery workspace, scoped to the browsing surface. */
+#app {
+  --work-control: #fffefa;
+  --work-ink: #263c32;
+  --work-edge: #9ba89c;
+  --work-focus: #29654f;
+}
+#app > main { padding-top: 20px; }
+#app .top { align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 12px; }
+#app .top h1 { margin: 0; }
+#app .folderbar { min-height: 0; padding: 8px 12px; margin-bottom: 10px; border-radius: 13px; }
+#app .panel { padding: clamp(12px, 2vw, 20px); border-radius: 16px; }
+#app .gallery-heading { flex-wrap: wrap; gap: 8px 14px; margin-bottom: 10px; }
+#app .gallery-heading h2 { margin: 0 0 3px; }
+#app .gallery-searchbar { gap: 8px; }
+#app .filterbar { margin-top: 10px; padding-top: 10px; gap: 8px; }
+#app .gallery-view { margin: 8px 0; padding: 4px 0; }
+#app #selectedInfo { line-height: 1.45; }
+#app .gallery-segments { gap: 2px; }
+
+#app :is(.studio-toolbar, .folderbar, .gallery-heading, .gallery-searchbar, .filterbar, .bottom-actions) :is(button.ghost, input.search, select),
+#app .studio-menu > summary,
+#app .studio-menu-popover :is(button.ghost,input,select) {
+  box-sizing: border-box;
+  min-height: 40px;
+  border: 1px solid var(--work-edge);
+  border-radius: 10px;
+  background: var(--work-control);
+  color: var(--work-ink);
+  font-size: 14px;
+}
+#app .gallery-searchbar input.search { max-width: none; min-width: min(220px, 100%); padding: 8px 12px; }
+#app .gallery-searchbar select { max-width: 100%; padding: 7px 28px 7px 10px; }
+#app .gallery-searchbar .studio-menu > summary { white-space: nowrap; }
+#app .gallery-heading button[aria-pressed="true"],
+#app .studio-menu[open] > summary { background: #e2eee3; border-color: #66816f; }
+#app :is(button,input,select,summary):focus-visible { outline: 2px solid var(--work-focus); outline-offset: 2px; }
+#app :is(.studio-toolbar,.folderbar,.gallery-heading,.bottom-actions) button.ghost:hover:not(:disabled) {
+  background: #edf3ea;
+  border-color: #728778;
+}
+#app .folder-node { min-height: 40px; }
+#app .folder-chevron { min-width: 28px; min-height: 32px; }
+#app button.upload-tile {
+  min-height: 44px;
+  padding: 6px 12px;
+  border-style: solid;
+  border-color: #3d5e4e;
+  background: #3d5e4e;
+  color: #fff;
+}
+#app .upload-tile small { color: #e2eee4; }
+#app .upload-tile-icon { width: 29px; height: 29px; background: #2b473a; }
+#app button.upload-tile:not(:disabled):hover,
+#app button.upload-tile.drag-over { background: #294f3d; border-color: #294f3d; }
+
+.studio-menu { position: relative; }
+.studio-menu > summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 11px;
+  cursor: pointer;
+  list-style: none;
+  font-weight: 650;
+}
+.studio-menu > summary::-webkit-details-marker { display: none; }
+.studio-menu > summary::after {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border: solid currentColor;
+  border-width: 0 1.5px 1.5px 0;
+  transform: rotate(45deg) translateY(-2px);
+}
+.studio-menu-popover {
+  position: absolute;
+  inset-inline-end: 0;
+  top: calc(100% + 6px);
+  z-index: 30;
+  display: grid;
+  gap: 6px;
+  width: max-content;
+  min-width: 142px;
+  max-width: calc(100vw - 48px);
+  padding: 8px;
+  border: 1px solid #bbc6bb;
+  border-radius: 12px;
+  background: #faf9f5;
+  color: var(--work-ink);
+  box-shadow: 0 12px 30px #24352924;
+}
+.studio-menu-popover button { text-align: left; }
+.gallery-dimension-fields { width: 250px; gap: 10px; padding: 12px; }
+.gallery-dimension-fields label { display: grid; gap: 4px; font-size: 13px; font-weight: 650; }
+.gallery-dimension-fields :is(select,input) { width: 100%; padding: 7px 10px; }
+.filter-count {
+  border-radius: 8px;
+  min-width: 17px;
+  padding: 2px 3px;
+  text-align: center;
+  background: #dce8dc;
+  font-size: 11px;
+}
+#app #uploadFeedback {
+  display: block;
+  position: static;
+  padding: 7px 12px;
+  margin-bottom: 10px;
+}
+#uploadFeedback > summary { cursor: pointer; padding: 3px 0; font-weight: 700; }
+.upload-feedback-content { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; margin-top: 6px; }
+#app #bulkbar {
+  margin-top: 10px;
+  padding: 8px 10px;
+  background: #e6eee6;
+  border: 1px solid #a7b8a9;
+  color: var(--work-ink);
+  box-shadow: 0 4px 16px #24352919;
+}
+#app #bulkbar :is(button,summary) { min-height: 36px; font-size: 13px; }
+#app #bulkbar button {
+  border: 1px solid #a7b8a9;
+  color: var(--work-ink);
+  background: var(--work-control);
+}
+#app #bulkbar button:not(:disabled):hover { transform: none; background: #edf3ea; }
+#app #bulkbar .bulk-publish { color: #62452b; border-color: #ad967c; }
+#bulkTools > summary { border: 1px solid #a7b8a9; border-radius: 9px; background: var(--work-control); }
+#bulkTools .studio-menu-popover { inset-inline: 0 auto; }
+#grid.select-mode .tile { cursor: default; }
+#grid.select-mode .tile:where(:hover,:focus-within) { box-shadow: inset 0 0 0 2px var(--work-focus); }
+#grid.select-mode .tile .check { width: 22px; height: 22px; }
+.has-wallpaper #app :is(.studio-menu-popover, .gallery-searchbar input, .gallery-searchbar select) { background: #fffefa; }
+@media (max-width: 620px) {
+  #app > main { padding: 13px 10px 40px; }
+  #app .top { align-items: flex-start; }
+  #app .gallery-searchbar input.search { flex-basis: 100%; font-size: 16px; }
+  #app .gallery-heading :is(button.ghost,.toolbar), #app .folderbar .toolbar { max-width: 100%; }
+  #app .gallery-dimensions[open] { position: static; }
+  #app .gallery-dimensions[open] .studio-menu-popover { position: static; width: min(100%, 270px); box-shadow: none; margin-top: 5px; }
+}
+@media (pointer: coarse) {
+  #app :is(.studio-toolbar, .folderbar, .gallery-heading, .gallery-searchbar, .filterbar, .bottom-actions) :is(button,input.search,select,summary),
+  #app :is(.studio-menu-popover button, .folder-node, #bulkbar button, #bulkbar summary) { min-height: 44px; }
+  #grid.select-mode .tile .check { width: 28px; height: 28px; }
+}

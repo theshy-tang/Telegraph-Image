@@ -30,11 +30,42 @@ describe('Studio library-wide ordered main listing',()=>{
 
 describe('Studio main list order changes',()=>{
  it('sends order with a new cursor sequence and preserves selection when sorting changes',async()=>{
-  const page=fs.readFileSync(path.join(__dirname,'../studio/index.html'),'utf8'),start=page.indexOf('async function loadPage('),source=page.slice(start,page.indexOf('function folderById(',start));
+  const page=fs.readFileSync(path.join(__dirname,'../studio/index.html'),'utf8'),start=page.indexOf('function gallerySearchParams('),source=page.slice(start,page.indexOf('function folderById(',start));
   const state={busy:false,items:[],seen:new Set(),selected:new Set(['selected.jpg']),cursor:'old-cursor',complete:false,tiles:new Map(),limit:100};
-  const elements={order:{value:'old'},loadMore:{},status:{},gallerySkeleton:{hidden:true},grid:{replaceChildren(){},setAttribute(){},removeAttribute(){}}};let url;
-  const load=new Function('state','$','api','normalize','isSafeId','render','renderFolders','toast',source+'return loadPage;')(state,id=>elements[id],async u=>{url=u;assert.strictEqual(elements.gallerySkeleton.hidden,state.items.length>0);return {keys:[],total:103,orderScope:'library',cursor:'new-cursor',list_complete:false}},x=>x,()=>true,()=>{},()=>{},()=>{});
+  const elements={order:{value:'old'},loadMore:{},selectAllMatched:{},status:{},gallerySkeleton:{hidden:true},grid:{replaceChildren(){},setAttribute(){},removeAttribute(){}}};let url;
+  const load=new Function('state','$','api','normalize','isSafeId','render','renderFolders','toast','updateSelectionUI','mediaViewport',source+'return loadPage;')(state,id=>elements[id],async u=>{url=u;assert.strictEqual(elements.gallerySkeleton.hidden,state.items.length>0);return {keys:[],total:103,orderScope:'library',cursor:'new-cursor',list_complete:false}},x=>x,()=>true,()=>{},()=>{},()=>{},()=>{},{items:[]});
   await load(true,{preserveSelection:true});assert.ok(url.includes('order=old'));assert.ok(!url.includes('cursor='));assert.strictEqual(state.cursor,'new-cursor');assert.strictEqual(state.listScope,'library');assert.ok(state.selected.has('selected.jpg'));assert.strictEqual(elements.order.disabled,false);assert.strictEqual(elements.gallerySkeleton.hidden,true);
   state.items.push({name:'existing.jpg'});await load(true);assert.strictEqual(elements.gallerySkeleton.hidden,true);
+ });
+});
+
+describe('Studio combined gallery search',()=>{
+ it('uses authoritative dimensions and combines media type, statuses, tag and orientation across pages',async()=>{
+  const f=fixture();
+  try{
+   const search=(await import('../functions/api/manage/search.js')).onRequestGet;
+   const request=filters=>search(makeContext({env:f.env,request:new Request('https://example.com/api/manage/search?'+new URLSearchParams(filters))}));
+   const records=[
+    ['image000.jpg',{width:1920,height:1080,liked:true,aiPublished:true}],
+    ['zzzzz_latest.jpg',{width:2400,height:1400,liked:true,aiPublished:true}],
+    ['image001.jpg',{width:2000,height:2800,liked:true,aiPublished:true}],
+    ['image002.jpg',{width:2200,height:1200,liked:false,aiPublished:true}],
+    ['image003.jpg',{width:2200,height:1200,liked:true,aiPublished:false}],
+    ['image004.jpg',{width:'9999',height:1200,liked:true,aiPublished:true}],
+    ['image005.jpg',{width:1200,height:600,liked:true,aiPublished:true}]
+   ];
+   for(const [id,metadata] of records){
+    f.sql.prepare('INSERT INTO studio_media_metadata VALUES (?,?,?,0,?)').run(id,JSON.stringify({...metadata,tags:['Banner']}),1,1);
+   }
+   const filters={view:'image',favorite:'true',published:'true',tag:'Banner',orientation:'landscape',min_width:'1920',min_height:'1080',limit:'1'};
+   const page=await (await request(filters)).json();
+   assert.strictEqual(page.total,2);
+   assert.deepStrictEqual(page.keys.map(x=>x.name),['zzzzz_latest.jpg']);
+   assert.strictEqual(page.keys[0].metadata.width,2400);
+   const next=await (await request({...filters,cursor:page.cursor})).json();
+   assert.deepStrictEqual(next.keys.map(x=>x.name),['image000.jpg']);
+   assert.strictEqual((await request({...filters,min_width:'2200',cursor:page.cursor})).status,400);
+   assert.strictEqual((await request({...filters,min_width:'Infinity'})).status,400);
+  }finally{f.sql.close();}
  });
 });

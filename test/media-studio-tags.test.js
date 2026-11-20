@@ -39,9 +39,9 @@ describe('Media Studio tag management',function(){
   assert.deepStrictEqual(h.calls,[{action:'remove_tags',payload:{names:['Shop']}}]);
  });
  it('filters exact tags alongside search and current folder constraints',function(){
-  const src=page.slice(page.indexOf('function filterItems(){'),page.indexOf('function elt('));
+  const src=page.slice(page.indexOf('function matchesSize(item){'),page.indexOf('function elt('));
   const elements={search:{value:''},albumFilter:{value:''},tagFilter:{value:'Shop'},order:{value:'new'}};
-  const state={chip:'all',items:[{id:'a',name:'a',date:1,tags:['Shop'],albums:[]},{id:'b',name:'b',date:2,tags:['Shopify'],albums:[]},{id:'c',name:'c',date:3,tags:['Shop'],albums:[]}]};
+  const state={chip:'all',size:{},items:[{id:'a',name:'a',date:1,tags:['Shop'],albums:[]},{id:'b',name:'b',date:2,tags:['Shopify'],albums:[]},{id:'c',name:'c',date:3,tags:['Shop'],albums:[]}]};
   const filter=new Function('state','$','inSelectedFolder',src+';return filterItems;')(state,id=>elements[id],x=>x.id!=='c');
   assert.deepStrictEqual(filter().map(x=>x.id),['a']);
  });

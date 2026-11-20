@@ -40,7 +40,10 @@ describe('Studio authenticated upload channel',function(){
  it('supports D1 versioned editing immediately after upload',async()=>{
   const runtime=await createStudioDB();try{
    const {env}=fixture();env.img_r2=runtime.bucket;env.MEDIA_STUDIO_DB=runtime.db;env.MEDIA_STUDIO_METADATA_D1='true';
-   const [result]=await (await handler(makeContext({env,request:uploadRequest(new File(['a'],'a.png'))}))).json();assert.strictEqual(result.record.metadata.metadataVersion,0);
+   await runtime.db.prepare('UPDATE studio_catalog_state SET ready=1').run();
+   const response=await handler(makeContext({env,request:uploadRequest(new File(['a'],'a.png'))}));
+   assert.strictEqual(response.status,200);
+   const [result]=await response.json();assert.strictEqual(result.record.metadata.metadataVersion,0);
    assert.strictEqual(await (await runtime.bucket.get(result.record.name)).text(),'a');
    const bulk=(await import('../functions/api/manage/bulk.js')).onRequestPost;
    const request=new Request('https://example.com/api/manage/bulk',{method:'POST',headers:{Origin:'https://example.com','Content-Type':'application/json'},body:JSON.stringify({action:'edit_details',ids:[result.record.name],fileName:'New',category:'',tags:['New'],metadataVersion:0})});
