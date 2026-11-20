@@ -44,7 +44,7 @@ const {createStudioDB}=require('../studio-runtime');const {createMockKV}=require
    else if(url.pathname==='/api/manage/bulk')handler=bulk.onRequestPost;
    else if(url.pathname==='/api/manage/folders')handler=req.method==='GET'?collection.onRequestGet:collection.onRequestPost;
    else if(url.pathname.startsWith('/api/manage/folders/'))handler=req.method==='PATCH'?detail.onRequestPatch:detail.onRequestDelete;
-   else if(url.pathname.startsWith('/api/manage/media/'))handler=media.onRequestGet;
+   else if(url.pathname.startsWith('/api/manage/media/'))handler=req.method==='POST'?media.onRequestPost:media.onRequestGet;
    let stage=-1;const context={env,request,params:{id},data:{},next:async()=>{stage++;return stage<manage.onRequest.length?manage.onRequest[stage](context):handler?handler(context):new Response('Not found',{status:404});}};
    const response=await context.next();res.writeHead(response.status,Object.fromEntries(response.headers));res.end(Buffer.from(await response.arrayBuffer()));
   }catch{res.writeHead(503,{'Content-Type':'application/json'});res.end('{"error":"Local test service failed"}');}

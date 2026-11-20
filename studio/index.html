@@ -1168,7 +1168,7 @@ async function detailWrite(action,payload={}){
     if(!result?.ok)throw Error(result?.error||'保存未确认，请重试');
     const m=result.metadata;
     if(action!=='edit_details'&&m.metadataVersion===d.x.metadataVersion+1&&d.baseVersion===d.x.metadataVersion)d.baseVersion=m.metadataVersion;
-    Object.assign(d.x,{width:m.width||null,height:m.height||null,metadataVersion:m.metadataVersion,name:m.fileName||d.x.name,liked:m.liked,published:m.aiPublished,tags:m.tags,albums:m.albums,category:m.category,folderId:m.folderId||null,...Object.fromEntries(['description','sourceUrl','prompt'].filter(k=>typeof m[k]==='string').map(k=>[k,m[k]]))});
+    Object.assign(d.x,{...(m.width&&m.height?{width:m.width,height:m.height}:{}),metadataVersion:m.metadataVersion,name:m.fileName||d.x.name,liked:m.liked,published:m.aiPublished,tags:m.tags,albums:m.albums,category:m.category,folderId:m.folderId||null,...Object.fromEntries(['description','sourceUrl','prompt'].filter(k=>typeof m[k]==='string').map(k=>[k,m[k]]))});
     render();renderFolders();if(typeof renderCatalogResults==='function'){renderCatalogResults();if($('catalogDialog')?.open)$('catalogStatus').textContent='资料已更新，重新检索可刷新匹配结果和数量。';}d.message.textContent=detailDirty()?'此操作已保存；资料仍有未保存修改':'已保存';return true;
   }catch(error){d.message.textContent='保存失败：'+error.message;return false;}
   finally{d.busy=false;d.fields.disabled=false;}
@@ -1190,9 +1190,20 @@ function preview(x){
   }
   const previewImage=zone.querySelector('img');
   if(previewImage){
-    const readSize=()=>{
+    const readSize=async()=>{
       const width=previewImage.naturalWidth,height=previewImage.naturalHeight;
-      if(width&&height){d.dimensions={width,height};showImageSize();}
+      if(!width||!height||d.dimensions)return;
+      d.dimensions={width,height};
+      showImageSize();
+      if(!state.assetDetailsEnabled||(x.width&&x.height))return;
+      try{
+        const saved=await api('/api/manage/media/'+encodeURIComponent(x.id),{
+          method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d.dimensions)
+        });
+        x.width=saved.width;x.height=saved.height;
+      }catch{
+        header.textContent+=' · 尺寸未登记，下次打开会重试';
+      }
     };
     previewImage.addEventListener('load',readSize,{once:true});
     if(previewImage.complete)readSize();
@@ -1276,7 +1287,6 @@ function preview(x){
       if(addInput.value.trim()){addTags();if(addInput.value.trim())return;}
       const tags=detailTagList(d.tags);
       const details={fileName:d.name.value,category:d.x.category||'',tags};
-      if(state.assetDetailsEnabled&&d.dimensions)Object.assign(details,d.dimensions);
       if(d.sourceUrl)details.sourceUrl=d.sourceUrl.value;
       if(!await detailWrite('edit_details',details))return;
       d.baseVersion=d.x.metadataVersion;
