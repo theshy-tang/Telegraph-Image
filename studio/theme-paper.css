@@ -271,3 +271,19 @@ button.upload-tile:not(:disabled):hover, button.upload-tile.drag-over {
   #preview :is(.ghost,.primary,.close,.detail-fields input,.detail-fields select) { transition: none; }
   #preview :is(.ghost,.primary,.close):active:not(:disabled) { transform: none; }
 }
+
+#app.sidebar-collapsed { grid-template-columns: minmax(0, 1fr); }
+#studioSidebar[hidden] { display: none; }
+.studio-heading { display: flex; align-items: flex-start; gap: 12px; }
+#sidebarToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  flex: none;
+  margin-top: 2px;
+}
+#sidebarToggle:focus-visible { outline: 2px solid #527963; outline-offset: 2px; }
+@media (max-width: 520px) {
+  .studio-heading { flex-wrap: wrap; }
+}

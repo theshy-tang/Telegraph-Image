@@ -225,7 +225,7 @@ body.working button[data-action]{opacity:.6}
 </form><p class="notice" id="loginError">后台账号对应 Cloudflare 的 BASIC_USER / BASIC_PASS。请先确保这两项都已配置。</p>
 </div>
 <div class="app hidden" id="app">
-<aside>
+<aside id="studioSidebar">
 <div class="brand"><span class="brandmark">M</span><span>Media Studio</span></div>
 <div class="navtitle">媒体空间</div>
 <button class="nav active" data-view="all"><span>▦</span>全部素材</button>
@@ -241,7 +241,12 @@ body.working button[data-action]{opacity:.6}
 </aside>
 <main>
 <div class="top">
-<div><h1 id="pageTitle">全部素材</h1><div class="muted">管理你的图片、视频、私人收藏和工作素材</div></div>
+<div class="studio-heading">
+<button id="sidebarToggle" type="button" class="ghost" aria-controls="studioSidebar" aria-expanded="true">
+<svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M9 5v14"/></svg>
+<span>收起侧栏</span>
+</button>
+<div><h1 id="pageTitle">全部素材</h1><div class="muted">管理你的图片、视频、私人收藏和工作素材</div></div></div>
 <div class="toolbar"><button id="recoverUploadOpen" type="button" class="ghost" disabled>补录上传</button><button id="wallpaperOpen" type="button" class="ghost">背景设置</button><button id="wallpaperMotion" type="button" class="ghost hidden">暂停背景</button><button id="reload" class="ghost">↻ 刷新</button><button id="uploadBtn" class="upload-tile" type="button">
   <span class="upload-tile-icon" aria-hidden="true">↑</span>
   <span><strong>上传素材</strong><small>点击选择或拖入图片、视频</small></span>
@@ -1570,6 +1575,21 @@ $('reload').addEventListener('click',()=>loadPage(true));
 $('gallerySize').addEventListener('input',e=>{galleryPreferences.size=Number(e.target.value);saveGalleryView();});
 $('galleryInfo').addEventListener('change',e=>{galleryPreferences.info=e.target.checked;saveGalleryView();});
 applyGalleryView();
+const sidebarToggle=$('sidebarToggle');
+const sidebarPreference='media-studio:sidebar-collapsed';
+function setSidebarCollapsed(collapsed){
+  $('app').classList.toggle('sidebar-collapsed',collapsed);
+  $('studioSidebar').hidden=collapsed;
+  sidebarToggle.setAttribute('aria-expanded',String(!collapsed));
+  sidebarToggle.querySelector('span').textContent=collapsed?'展开侧栏':'收起侧栏';
+  scheduleMediaWindow();
+}
+try{setSidebarCollapsed(localStorage.getItem(sidebarPreference)==='true');}catch{}
+sidebarToggle.addEventListener('click',()=>{
+  const collapsed=sidebarToggle.getAttribute('aria-expanded')==='true';
+  setSidebarCollapsed(collapsed);
+  try{localStorage.setItem(sidebarPreference,String(collapsed));}catch{}
+});
 window.addEventListener('scroll',scheduleMediaWindow,{passive:true});
 window.addEventListener('resize',scheduleMediaWindow);
 if(typeof ResizeObserver!=='undefined')new ResizeObserver(scheduleMediaWindow).observe($('grid'));
