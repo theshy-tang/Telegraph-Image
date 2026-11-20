@@ -439,7 +439,7 @@ function normalize(raw){
   const m=raw.metadata||{},id=raw.name;
   return {id,metadataVersion:m.metadataVersion,name:m.fileName||id,bytes:Number(m.fileSize)||0,date:Number(m.TimeStamp)||0,liked:m.liked===true,published:m.aiPublished===true,
     tags:Array.isArray(m.tags)?m.tags.filter(x=>typeof x==='string'):[],
-    albums:Array.isArray(m.albums)?m.albums.filter(x=>typeof x==='string'):[],category:m.category||'',description:typeof m.description==='string'?m.description:'',sourceUrl:typeof m.sourceUrl==='string'?m.sourceUrl:'',prompt:typeof m.prompt==='string'?m.prompt:'',folderId:typeof m.folderId==='string'?m.folderId:null,type:getType(id)};
+    albums:Array.isArray(m.albums)?m.albums.filter(x=>typeof x==='string'):[],category:m.category||'',width:m.width||null,height:m.height||null,description:typeof m.description==='string'?m.description:'',sourceUrl:typeof m.sourceUrl==='string'?m.sourceUrl:'',prompt:typeof m.prompt==='string'?m.prompt:'',folderId:typeof m.folderId==='string'?m.folderId:null,type:getType(id)};
 }
 async function loadPage(reset=false,{preserveSelection=false}={}){
   if(state.busy)return;
@@ -1168,7 +1168,7 @@ async function detailWrite(action,payload={}){
     if(!result?.ok)throw Error(result?.error||'保存未确认，请重试');
     const m=result.metadata;
     if(action!=='edit_details'&&m.metadataVersion===d.x.metadataVersion+1&&d.baseVersion===d.x.metadataVersion)d.baseVersion=m.metadataVersion;
-    Object.assign(d.x,{metadataVersion:m.metadataVersion,name:m.fileName||d.x.name,liked:m.liked,published:m.aiPublished,tags:m.tags,albums:m.albums,category:m.category,folderId:m.folderId||null,...Object.fromEntries(['description','sourceUrl','prompt'].filter(k=>typeof m[k]==='string').map(k=>[k,m[k]]))});
+    Object.assign(d.x,{width:m.width||null,height:m.height||null,metadataVersion:m.metadataVersion,name:m.fileName||d.x.name,liked:m.liked,published:m.aiPublished,tags:m.tags,albums:m.albums,category:m.category,folderId:m.folderId||null,...Object.fromEntries(['description','sourceUrl','prompt'].filter(k=>typeof m[k]==='string').map(k=>[k,m[k]]))});
     render();renderFolders();if(typeof renderCatalogResults==='function'){renderCatalogResults();if($('catalogDialog')?.open)$('catalogStatus').textContent='资料已更新，重新检索可刷新匹配结果和数量。';}d.message.textContent=detailDirty()?'此操作已保存；资料仍有未保存修改':'已保存';return true;
   }catch(error){d.message.textContent='保存失败：'+error.message;return false;}
   finally{d.busy=false;d.fields.disabled=false;}
@@ -1182,7 +1182,22 @@ function preview(x){
   const info=$('previewInfo');info.replaceChildren();
   const fields=elt('fieldset','detail-fields'),message=elt('p','notice');message.setAttribute('role','status');
   const d=detailSession={x,baseVersion:x.metadataVersion,tags:[...x.tags],busy:false,fields,message};
-  const header=elt('div','detail-meta',x.type.toUpperCase()+' · '+formatBytes(x.bytes)+(x.date?' · '+new Date(x.date).toLocaleDateString():''));
+  const header=elt('div','detail-meta');
+  function showImageSize(){
+    const size=d.dimensions||x;
+    const pixels=x.type==='image'?(size.width&&size.height?' · '+size.width+' × '+size.height+' px':' · 尺寸未读取'):'';
+    header.textContent=x.type.toUpperCase()+pixels+' · '+formatBytes(x.bytes)+(x.date?' · '+new Date(x.date).toLocaleDateString():'');
+  }
+  const previewImage=zone.querySelector('img');
+  if(previewImage){
+    const readSize=()=>{
+      const width=previewImage.naturalWidth,height=previewImage.naturalHeight;
+      if(width&&height){d.dimensions={width,height};showImageSize();}
+    };
+    previewImage.addEventListener('load',readSize,{once:true});
+    if(previewImage.complete)readSize();
+  }
+  showImageSize();
   fields.append(header);
   if(x.albums.length)fields.append(elt('p','muted','旧版相册标签：'+x.albums.join('、')));
   function field(title,input){const label=elt('label','detail-label',title);label.append(input);fields.append(label);return input;}
@@ -1261,6 +1276,7 @@ function preview(x){
       if(addInput.value.trim()){addTags();if(addInput.value.trim())return;}
       const tags=detailTagList(d.tags);
       const details={fileName:d.name.value,category:d.x.category||'',tags};
+      if(state.assetDetailsEnabled&&d.dimensions)Object.assign(details,d.dimensions);
       if(d.sourceUrl)details.sourceUrl=d.sourceUrl.value;
       if(!await detailWrite('edit_details',details))return;
       d.baseVersion=d.x.metadataVersion;

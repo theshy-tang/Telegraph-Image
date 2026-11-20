@@ -1,6 +1,6 @@
 import {sourceRecord} from '../../utils/studio-records.js';
 import {parseAssetDetails,ASSET_FIELDS} from '../../utils/studio-asset-details.js';
-import {metadataD1Enabled,readStudioMetadata,mutateStudioMetadata} from '../../utils/studio-metadata.js';
+import {imageDimensions,metadataD1Enabled,readStudioMetadata,mutateStudioMetadata} from '../../utils/studio-metadata.js';
 import {hasStudioD1,getStudioFolder,getStudioMediaFolders} from '../../utils/studio-d1.js';
 /**
  * Media Studio bulk metadata updates.
@@ -105,6 +105,12 @@ export async function onRequestPost(context) {
       typeof payload.category!=='string'||payload.category.length>48||/[\u0000-\u001f\u007f<>]/.test(payload.category))
       return json({error:'Invalid media details'},400);
     try{payload.assetDetails=parseAssetDetails(payload);}catch{return json({error:'Invalid description, source URL or prompt'},400);}
+    if(Object.hasOwn(payload,'width')||Object.hasOwn(payload,'height')){
+      const dimensions=imageDimensions(payload);
+      if(!dimensions.width||!/\.(jpe?g|png|gif|webp|bmp|tiff?|ico|avif|apng)$/i.test(payload.ids[0]))
+        return json({error:'Invalid image dimensions'},400);
+      Object.assign(payload.assetDetails,dimensions);
+    }
     payload.fileName=name;payload.tags=tags;payload.category=payload.category.trim();
   }
   const ids = [...new Set(payload.ids)];
@@ -174,6 +180,7 @@ export async function onRequestPost(context) {
           }
           results[i] = { id, ok: true, metadata: {
             metadataVersion: updated.metadataVersion,
+            ...imageDimensions(updated),
             ...Object.fromEntries(ASSET_FIELDS.filter(k=>typeof updated[k]==='string').map(k=>[k,updated[k]])),
             fileName: updated.fileName || id,
           liked: updated.liked === true,

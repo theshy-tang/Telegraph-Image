@@ -17,6 +17,22 @@ describe('Studio durable D1 registrations while KV writes are rejected',()=>{
   const file=await download(makeContext({env:f.env,params:{id},request:new Request('https://example.com/api/manage/download/'+id)}));assert.strictEqual(file.status,200);assert.strictEqual(await file.text(),'fixture');
   const page=await (await listing(makeContext({env:f.env,request:new Request('https://example.com/api/manage/list?order=new')}))).json();assert.strictEqual(page.keys[0].name,id);
  }finally{f.close();}});
+ it('persists pixel dimensions and filters only published images by tag and size',async()=>{
+  const f=fixture();
+  try{
+   await records.registerStudioRecord(f.env,'sample.png',m);
+   const edit={action:'edit_details',ids:['sample.png'],metadataVersion:0,fileName:'Sample',category:'',tags:['Banner'],width:1920,height:1080};
+   const changed=await bulk(makeContext({env:f.env,request:json(edit)}));
+   assert.strictEqual((await changed.json()).results[0].metadata.width,1920);
+   const search=async query=>(await (await catalog(makeContext({env:f.env,request:new Request('https://example.com/api/shopify-assets?cursor=records%3A&'+query)}))).json()).items;
+   assert.deepStrictEqual(await search('tag=banner&min_width=1920'),[]);
+   await bulk(makeContext({env:f.env,request:json({action:'publish',ids:['sample.png']})}));
+   const [item]=await search('tag=banner&min_width=1920&min_height=1080');
+   assert.strictEqual(item.height,1080);
+   assert.deepStrictEqual(await search('tag=banner&min_width=1921'),[]);
+   assert.deepStrictEqual(await search('tag=product'),[]);
+  }finally{f.close();}
+ });
  it('rolls back all registration writes if inventory fails',async()=>{const f=fixture();try{f.sql.exec("CREATE TRIGGER fail_inventory BEFORE INSERT ON studio_media_inventory BEGIN SELECT RAISE(ABORT,'fixture failure'); END");await assert.rejects(()=>records.registerStudioRecord(f.env,'sample.png',m));assert.strictEqual(f.sql.prepare('SELECT COUNT(*) AS n FROM studio_media_records').get().n,0);assert.strictEqual(f.sql.prepare('SELECT COUNT(*) AS n FROM studio_media_metadata').get().n,0);}finally{f.close();}});
  it('keeps D1 edits and moderation authoritative across reupload, KV synchronization and stale catalog scans',async()=>{const f=fixture();try{
   await records.registerStudioRecord(f.env,'sample.png',m);const sm=await import('../functions/utils/studio-metadata.js');await sm.mutateStudioMetadata(f.db,'sample.png',m,x=>({...x,fileName:'Edited',description:'private note',tags:['Keep']}));

@@ -6,8 +6,13 @@ export function metadataD1Enabled(env){
   if(!hasStudioD1(env))throw Error('Metadata D1 binding required');
   return true;
 }
+export function imageDimensions(metadata){
+  const {width,height}=metadata;
+  const valid=value=>Number.isInteger(value)&&value>0&&value<=100000;
+  return valid(width)&&valid(height)?{width,height}:{};
+}
 export function editableMetadata(m,id){
-  return {fileName:typeof m.fileName==='string'?m.fileName:id,liked:m.liked===true,aiPublished:m.aiPublished===true,
+  return {...imageDimensions(m),fileName:typeof m.fileName==='string'?m.fileName:id,liked:m.liked===true,aiPublished:m.aiPublished===true,
     tags:Array.isArray(m.tags)?m.tags.filter(x=>typeof x==='string'):[],
     albums:Array.isArray(m.albums)?m.albums.filter(x=>typeof x==='string'):[],category:typeof m.category==='string'?m.category:'',...Object.fromEntries(ASSET_FIELDS.filter(k=>typeof m[k]==='string').map(k=>[k,m[k]]))};
 }

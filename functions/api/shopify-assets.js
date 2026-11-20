@@ -1,5 +1,5 @@
 import {sourceCatalogPage} from '../utils/studio-records.js';
-import {overlayStudioMetadata} from '../utils/studio-metadata.js';
+import {imageDimensions,overlayStudioMetadata} from '../utils/studio-metadata.js';
 /**
  * Telegraph-Image / Shopify AI asset catalog
  * Install at: functions/api/shopify-assets.js
@@ -41,6 +41,16 @@ export async function onRequest(context) {
   }
 
   const url = new URL(request.url);
+  const tag = url.searchParams.get('tag')?.trim().normalize('NFC').toLowerCase();
+  const minimums = {};
+  for (const [param, key] of [['min_width','width'],['min_height','height']]) {
+    if (!url.searchParams.has(param)) continue;
+    const value = url.searchParams.get(param);
+    if (!/^[1-9]\d{0,5}$/.test(value) || Number(value)>100000)
+      return respond({error:'Invalid image dimension filter'},400);
+    minimums[key] = Number(value);
+  }
+  if (tag && tag.length>48) return respond({error:'Invalid tag'},400);
   const rawLimit = url.searchParams.get('limit');
   // 'limit' is the number of KV keys scanned per page; published count may be lower.
   const parsed = rawLimit === null ? 200 : Number(rawLimit);
@@ -82,7 +92,12 @@ export async function onRequest(context) {
       ? metadata.albums.filter(album => typeof album === 'string').slice(0, 30)
       : [];
 
+    const dimensions=imageDimensions(metadata);
+    if (tag && !tags.some(value=>value.trim().normalize('NFC').toLowerCase()===tag)) continue;
+    if (Object.entries(minimums).some(([key,value])=>!(dimensions[key]>=value))) continue;
     items.push({
+      width: dimensions.width ?? null,
+      height: dimensions.height ?? null,
       tags,
       albums,
       category: typeof metadata.category === 'string' ? metadata.category : '',
