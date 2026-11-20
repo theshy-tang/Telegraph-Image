@@ -242,7 +242,10 @@ body.working button[data-action]{opacity:.6}
 <main>
 <div class="top">
 <div><h1 id="pageTitle">全部素材</h1><div class="muted">管理你的图片、视频、私人收藏和工作素材</div></div>
-<div class="toolbar"><button id="recoverUploadOpen" type="button" class="ghost" disabled>补录上传</button><button id="wallpaperOpen" type="button" class="ghost">背景设置</button><button id="wallpaperMotion" type="button" class="ghost hidden">暂停背景</button><button id="reload" class="ghost">↻ 刷新</button><button id="uploadBtn" class="primary">↑ 上传素材</button><input id="fileInput" type="file" accept="image/*,video/*" multiple class="hidden"></div>
+<div class="toolbar"><button id="recoverUploadOpen" type="button" class="ghost" disabled>补录上传</button><button id="wallpaperOpen" type="button" class="ghost">背景设置</button><button id="wallpaperMotion" type="button" class="ghost hidden">暂停背景</button><button id="reload" class="ghost">↻ 刷新</button><button id="uploadBtn" class="upload-tile" type="button">
+  <span class="upload-tile-icon" aria-hidden="true">↑</span>
+  <span><strong>上传素材</strong><small>点击选择或拖入图片、视频</small></span>
+</button><input id="fileInput" type="file" accept="image/*,video/*" multiple class="hidden"></div>
 </div>
 <section id="uploadFeedback" class="upload-feedback hidden" aria-label="上传进度与结果" role="status" aria-live="polite"><div><strong>上传任务</strong><div id="uploadFeedbackMessage" class="upload-feedback-message"></div></div><button type="button" id="uploadFeedbackClose" class="ghost" aria-label="收起上传结果">收起</button></section>
 <div class="stats">
@@ -1180,21 +1183,24 @@ function preview(x){
     burst.style.left=Math.min(position.x,chips.clientWidth)+'px';
     burst.style.top=Math.min(position.y,chips.clientHeight)+'px';
     const halfWidth=Math.min(position.width/2,48);
-    for(let index=0;index<32;index++){
+    const palette=['#8052bf','#d74075','#e56c2f','#168bb2','#b43ad2'];
+    const colorOffset=Math.floor(Math.random()*palette.length);
+    for(let index=0;index<48;index++){
       const dot=elt('i');
       const column=index%8;
       const row=Math.floor(index/8);
       const x=(column/7*2-1)*halfWidth;
-      const y=(row-1.5)*5;
+      const y=(row-2.5)*5;
+      dot.style.setProperty('--particle-color',palette[(colorOffset+index)%palette.length]);
       dot.style.setProperty('--x',x+'px');
       dot.style.setProperty('--y',y+'px');
-      dot.style.setProperty('--dx',(x+(column-3.5)*9+18)+'px');
-      dot.style.setProperty('--dy',(y-14-row*6-(index%3)*5)+'px');
+      dot.style.setProperty('--dx',(x+(column-3.5)*16+26)+'px');
+      dot.style.setProperty('--dy',(y-20-row*8-(index%3)*8)+'px');
       dot.style.setProperty('--delay',(column*21+(index%3)*12)+'ms');
       burst.append(dot);
     }
     chips.append(burst);
-    setTimeout(()=>burst.remove(),900);
+    setTimeout(()=>burst.remove(),1150);
   }
   function drawTags(){
     d.commitTagEdit=null;d.editingInput=null;
@@ -1561,7 +1567,30 @@ $('selectAllMatched').addEventListener('click',selectAllMatching);
 $('clearFilter').addEventListener('click',()=>{$('search').value='';$('albumFilter').value='';$('tagFilter').value='';setChip('all');});
 $('closePreview').addEventListener('click',closeDetails);
 $('preview').addEventListener('cancel',event=>{event.preventDefault();closeDetails();});
-$('uploadBtn').addEventListener('click',()=>$('fileInput').click());
+const uploadTile=$('uploadBtn');
+uploadTile.addEventListener('click',()=>{if(!IS_PREVIEW&&!state.busy)$('fileInput').click();});
+uploadTile.addEventListener('dragover',event=>{
+  if(!event.dataTransfer?.types.includes('Files'))return;
+  event.preventDefault();
+  const ready=!IS_PREVIEW&&!state.busy&&!uploadTile.disabled;
+  event.dataTransfer.dropEffect=ready?'copy':'none';
+  uploadTile.classList.toggle('drag-over',ready);
+});
+uploadTile.addEventListener('dragleave',event=>{
+  if(!uploadTile.contains(event.relatedTarget))uploadTile.classList.remove('drag-over');
+});
+uploadTile.addEventListener('drop',event=>{
+  event.preventDefault();
+  uploadTile.classList.remove('drag-over');
+  if(IS_PREVIEW||state.busy||uploadTile.disabled)return;
+  const dropped=[...(event.dataTransfer?.files||[])];
+  const files=dropped.filter(file=>/^(image|video)\//i.test(file.type));
+  if(files.length!==dropped.length||!files.length){
+    toast('请拖入图片或视频文件。');
+    return;
+  }
+  upload(files);
+});
 $('uploadFeedbackClose').addEventListener('click',()=>$('uploadFeedback').classList.add('hidden'));
 $('fileInput').addEventListener('change',e=>{upload([...e.target.files]);e.target.value='';});
 })();

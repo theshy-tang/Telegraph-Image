@@ -134,3 +134,46 @@ dialog{color:var(--paper-text);box-shadow:0 18px 65px rgba(38,45,38,.2)}dialog::
   outline: 2px solid #476457;
   outline-offset: 2px;
 }
+
+.tag-dissolve i {
+  width: 7px;
+  height: 7px;
+  background: var(--particle-color);
+  animation-duration: 900ms;
+}
+.tag-dissolve i:nth-child(3n) { background: var(--particle-color); }
+.tag-dissolve i:nth-child(4n) { width: 5px; height: 5px; }
+
+button.upload-tile {
+  display: inline-flex;
+  align-items: center;
+  gap: 11px;
+  min-height: 58px;
+  padding: 8px 13px;
+  border: 1px dashed #789180;
+  border-radius: 13px;
+  background: #f4f7f0;
+  color: #304c3f;
+  text-align: left;
+}
+.upload-tile-icon {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  background: #dae7db;
+  font-size: 22px;
+  transition: transform .18s ease;
+}
+.upload-tile strong, .upload-tile small { display: block; }
+.upload-tile small { margin-top: 2px; font-size: 11px; color: #52675b; }
+button.upload-tile:not(:disabled):hover, button.upload-tile.drag-over {
+  background: #e7f1e7;
+  border-color: #476457;
+}
+.upload-tile:hover:not(:disabled) .upload-tile-icon,
+.upload-tile.drag-over .upload-tile-icon { transform: translateY(-3px); }
+@media (prefers-reduced-motion: reduce) {
+  .upload-tile-icon { transition: none; transform: none !important; }
+}
