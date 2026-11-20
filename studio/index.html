@@ -1263,7 +1263,23 @@ function preview(x){
   const favorite=elt('button','ghost',x.liked?'取消收藏':'收藏素材');favorite.type='button';favorite.addEventListener('click',async()=>{if(await detailWrite(d.x.liked?'unfavorite':'favorite'))favorite.textContent=d.x.liked?'取消收藏':'收藏素材';});
   const publish=elt('button','ghost',x.published?'撤销 AI 发布':'发布给 AI');publish.type='button';publish.addEventListener('click',async()=>{if(!d.x.published&&!confirm('确认将此图片发布到无需登录的公开 AI 素材目录？'))return;if(await detailWrite(d.x.published?'unpublish':'publish'))publish.textContent=d.x.published?'撤销 AI 发布':'发布给 AI';});
   const actions=elt('div','detail-actions');actions.append(favorite,publish);fields.append(actions,elt('hr'));
-  const copy=elt('button','ghost','复制真实链接');copy.type='button';copy.addEventListener('click',async()=>{try{await navigator.clipboard.writeText(publicFileUrl(x.id));toast('已复制链接');}catch{message.textContent='复制失败，请检查浏览器权限';}});
+  const copy=elt('button','ghost detail-copy');copy.type='button';
+  const copyIcon=elt('span','detail-copy-icon','↗');
+  const copyLabel=elt('span','','复制真实链接');
+  copyIcon.setAttribute('aria-hidden','true');
+  copy.append(copyIcon,copyLabel);
+  let copyReset;
+  copy.addEventListener('click',async()=>{
+    try{
+      await navigator.clipboard.writeText(publicFileUrl(x.id));
+      clearTimeout(copyReset);
+      copy.dataset.copied='true';copyIcon.textContent='✓';copyLabel.textContent='已复制链接';
+      message.textContent='已复制原图链接';
+      copyReset=setTimeout(()=>{
+        delete copy.dataset.copied;copyIcon.textContent='↗';copyLabel.textContent='复制真实链接';
+      },1800);
+    }catch{message.textContent='复制失败，请检查剪贴板权限';}
+  });
   const download=elt('button','ghost','下载 / 导出');download.type='button';download.addEventListener('click',()=>openExport([x.id],'file'));
   fields.append(download,copy,elt('p','muted','仅修改素材资料，不更改原始文件和图片 URL。'));info.append(fields,message);$('preview').showModal();
 }
