@@ -1184,16 +1184,22 @@ function preview(x){
     burst.setAttribute('aria-hidden','true');
     burst.style.left=Math.min(position.x,chips.clientWidth)+'px';
     burst.style.top=Math.min(position.y,chips.clientHeight)+'px';
-    for(let index=0;index<12;index++){
+    const halfWidth=Math.min(position.width/2,48);
+    for(let index=0;index<32;index++){
       const dot=elt('i');
-      const angle=index*Math.PI/6;
-      const distance=14+(index%3)*7;
-      dot.style.setProperty('--dx',Math.cos(angle)*distance+'px');
-      dot.style.setProperty('--dy',Math.sin(angle)*distance+'px');
+      const column=index%8;
+      const row=Math.floor(index/8);
+      const x=(column/7*2-1)*halfWidth;
+      const y=(row-1.5)*5;
+      dot.style.setProperty('--x',x+'px');
+      dot.style.setProperty('--y',y+'px');
+      dot.style.setProperty('--dx',(x+(column-3.5)*9+18)+'px');
+      dot.style.setProperty('--dy',(y-14-row*6-(index%3)*5)+'px');
+      dot.style.setProperty('--delay',(column*21+(index%3)*12)+'ms');
       burst.append(dot);
     }
     chips.append(burst);
-    setTimeout(()=>burst.remove(),350);
+    setTimeout(()=>burst.remove(),900);
   }
   function drawTags(){
     d.commitTagEdit=null;d.editingInput=null;
@@ -1211,7 +1217,7 @@ function preview(x){
       remove.addEventListener('click',()=>{
         if(d.x.tags.includes(tag)){
           const row=chips.getBoundingClientRect(),box=chip.getBoundingClientRect();
-          removedTagPositions.set(tag,{x:box.left-row.left+box.width/2,y:box.top-row.top+box.height/2});
+          removedTagPositions.set(tag,{x:box.left-row.left+box.width/2,y:box.top-row.top+box.height/2,width:box.width});
         }
         d.tags=d.tags.filter(t=>t!==tag);
         message.textContent='标签已修改，点击保存资料生效';
