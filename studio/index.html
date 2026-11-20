@@ -266,7 +266,20 @@ body.working button[data-action]{opacity:.6}
 <div id="childFolders" class="child-folder-region hidden" aria-label="当前相册的子文件夹"></div>
 <div class="heading"><div><h2>素材资源管理</h2><div class="muted" id="resultCount" role="status" style="margin-top:5px">加载中...</div></div><div class="toolbar"><button id="indexMaintenanceOpen" type="button" class="ghost" disabled>索引维护</button><button id="tagManagerOpen" type="button" class="ghost" disabled>标签管理</button><button id="globalSearchOpen" type="button" class="ghost" disabled title="全库索引准备好后可用">⌕ 全库检索</button><button id="selectPage" class="ghost">✓ 全选当前结果</button></div></div>
 <div class="toolbar"><input id="search" class="search" placeholder="⌕ 搜索文件名、标签、相册..." aria-label="搜索素材"><select id="tagFilter" aria-label="按标签筛选"><option value="">全部标签</option></select><select id="albumFilter" title="旧版标签式相册（兼容旧数据）"><option value="">旧版相册标签</option></select><select id="order"><option value="new">最新上传</option><option value="old">最早上传</option><option value="name">名称排序</option></select></div>
-<div class="filterbar"><div class="toolbar" id="chips"><button data-chip="all" class="chip on">全部</button><button data-chip="image" class="chip">图片</button><button data-chip="video" class="chip">视频</button><button data-chip="favorites" class="chip">收藏</button><button data-chip="published" class="chip">AI 已发布</button></div><span class="muted" id="selectedInfo">未选择</span></div>
+<div class="filterbar">
+  <div id="chips" class="gallery-filters" role="group" aria-label="素材筛选">
+    <div class="gallery-segments" role="group" aria-label="媒体类型">
+      <button type="button" data-chip="all" class="chip on" aria-pressed="true">全部</button>
+      <button type="button" data-chip="image" class="chip" aria-pressed="false">图片</button>
+      <button type="button" data-chip="video" class="chip" aria-pressed="false">视频</button>
+    </div>
+    <div class="gallery-status-filters" role="group" aria-label="素材状态">
+      <button type="button" data-chip="favorites" class="chip" aria-pressed="false"><span aria-hidden="true">♡</span> 收藏</button>
+      <button type="button" data-chip="published" class="chip" aria-pressed="false"><span aria-hidden="true">✧</span> AI 已发布</button>
+    </div>
+  </div>
+  <span class="muted" id="selectedInfo">未选择</span>
+</div>
 <div id="bulkbar" class="bulkbar hidden"><span class="count" id="selectedCount">已选择 0 项</span><button data-action="favorite">♡ 收藏</button><button data-action="unfavorite">取消收藏</button><button data-action="add_tags">＋ 标签</button><button data-action="remove_tags">－ 标签</button><button data-action="move_folder">▤ 移入相册</button><button data-action="clear_folder">移出相册</button><button data-action="set_category">分类</button><button data-action="publish">✧ 发布 AI</button><button data-action="unpublish">撤销 AI 发布</button><button id="exportSelected" type="button">下载 / 导出</button><button id="clearSelection">清除选择</button></div>
 <div class="gallery-view" role="group" aria-label="图片展示设置">
 <span class="gallery-mode">自适应拼贴 · 原图比例</span>
@@ -904,7 +917,12 @@ function render(){
 function formatBytes(n){return n>=1048576?(n/1048576).toFixed(1)+' MB':n>=1024?(n/1024).toFixed(1)+' KB':n+' B';}
 function select(id,checked){checked?state.selected.add(id):state.selected.delete(id);updateSelectionUI(mediaViewport.items);}
 function setChip(chip){
-  state.chip=chip;document.querySelectorAll('.chip').forEach(el=>el.classList.toggle('on',el.dataset.chip===chip));
+  state.chip=chip;
+  $('chips').querySelectorAll('[data-chip]').forEach(button=>{
+    const active=button.dataset.chip===chip;
+    button.classList.toggle('on',active);
+    button.setAttribute('aria-pressed',String(active));
+  });
   document.querySelectorAll('.nav').forEach(el=>el.classList.toggle('active',el.dataset.view===chip));
   if(state.folderSelection==='all')$('pageTitle').textContent=({all:'全部素材',image:'图片',video:'视频',favorites:'我的收藏',published:'AI 已发布'})[chip]||'全部素材';
   render();

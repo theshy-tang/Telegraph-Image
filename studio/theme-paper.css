@@ -80,3 +80,40 @@ dialog{color:var(--paper-text);box-shadow:0 18px 65px rgba(38,45,38,.2)}dialog::
   .gallery-skeleton span { animation: none; }
   .tag-dissolve { display: none; }
 }
+
+.gallery-filters,
+.gallery-segments,
+.gallery-status-filters {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.gallery-filters { flex-wrap: wrap; gap: 12px; }
+.gallery-segments {
+  gap: 2px;
+  padding: 4px;
+  border: 1px solid var(--paper-border);
+  border-radius: 13px;
+  background: var(--paper-soft);
+}
+.gallery-filters .chip {
+  min-height: 36px;
+  padding: 7px 13px;
+  font-size: 13px;
+  transform: none;
+}
+.gallery-segments .chip {
+  min-width: 58px;
+  background: transparent;
+  border-color: transparent;
+}
+.gallery-status-filters .chip { background: transparent; }
+.gallery-filters .chip.on {
+  background: #476457;
+  border-color: #476457;
+  color: #fff;
+}
+.gallery-filters .chip:focus-visible {
+  outline: 2px solid #476457;
+  outline-offset: 2px;
+}
