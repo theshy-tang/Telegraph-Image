@@ -785,7 +785,7 @@ function filterItems(){
 function elt(tag,cls,text){const e=document.createElement(tag);if(cls)e.className=cls;if(text!==undefined)e.textContent=text;return e;}
 function updateSelectionUI(matches){
   const count=state.selected.size;
-  $('selectedInfo').textContent=count?'● 已选中 '+count+' 项':'点击卡片查看大图 · 勾选后可批量操作';
+  $('selectedInfo').textContent=count?'● 已选中 '+count+' 项':'点击查看大图 · 按住 Shift 滑过卡片可多选';
   $('selectedCount').textContent='已选 '+count+' 项';
   $('bulkbar').classList.toggle('hidden',count===0);
   matches=matches||filterItems();
@@ -849,6 +849,18 @@ function navigateMedia(id,key){
   if(list.length>200){window.scrollTo({top:Math.max(0,grid.getBoundingClientRect().top+window.scrollY+geometry.boxes[next].top-window.innerHeight/4),behavior:'instant'});paintMediaWindow(true);}
   state.tiles.get(item.id)?.focus({preventScroll:list.length>200});return true;
 }
+let sweepAnchor=null;
+function extendGallerySelection(id){
+  const items=mediaViewport.items;
+  const end=items.findIndex(item=>item.id===id);
+  if(end<0)return;
+  const start=sweepAnchor?.items===items?sweepAnchor.index:end;
+  for(let index=Math.min(start,end);index<=Math.max(start,end);index++){
+    state.selected.add(items[index].id);
+  }
+  sweepAnchor={items,index:end};
+  updateSelectionUI(items);
+}
 function createTile(x){
   const tile=elt('article','tile');tile.tabIndex=0;tile.dataset.mediaId=x.id;tile.setAttribute('aria-label','查看 '+x.name);
   const media=elt('div','media');
@@ -880,7 +892,10 @@ function createTile(x){
   const filename=elt('div','filename',x.name),sub=elt('div','sub');
   details.append(filename,sub);tile.append(details);
   tile._check=check;tile._tags=tags;tile._filename=filename;tile._sub=sub;
-  tile.addEventListener('click',()=>{const latest=state.items.find(v=>v.id===x.id);if(latest)preview(latest);});
+  tile.addEventListener('pointerenter',event=>{
+    if(event.pointerType==='mouse'&&event.shiftKey&&!$('preview').open)extendGallerySelection(x.id);
+  });
+  tile.addEventListener('click',event=>{if(event.shiftKey){extendGallerySelection(x.id);return;}const latest=state.items.find(v=>v.id===x.id);if(latest)preview(latest);});
   tile.addEventListener('keydown',e=>{if(e.target===tile&&navigateMedia(x.id,e.key)){e.preventDefault();return;}if(e.key==='Enter'&&e.target===tile){const latest=state.items.find(v=>v.id===x.id);if(latest)preview(latest);}});
   return tile;
 }
@@ -1619,6 +1634,21 @@ $('bulkbar').addEventListener('click',e=>{const b=e.target.closest('[data-action
 $('loadMore').addEventListener('click',()=>loadPage());
 $('selectAllMatched').addEventListener('click',selectAllMatching);
 $('clearFilter').addEventListener('click',()=>{$('search').value='';$('albumFilter').value='';$('tagFilter').value='';setChip('all');});
+window.addEventListener('keyup',event=>{if(event.key==='Shift')sweepAnchor=null;});
+window.addEventListener('blur',()=>{sweepAnchor=null;});
+const previewDialog=$('preview');
+function onPreviewBackdrop(event){
+  if(event.target!==previewDialog)return false;
+  const box=previewDialog.getBoundingClientRect();
+  return event.clientX<box.left||event.clientX>=box.right||event.clientY<box.top||event.clientY>=box.bottom;
+}
+let pressedPreviewBackdrop=false;
+previewDialog.addEventListener('pointerdown',event=>{pressedPreviewBackdrop=onPreviewBackdrop(event);});
+previewDialog.addEventListener('click',event=>{
+  if(pressedPreviewBackdrop&&onPreviewBackdrop(event))closeDetails();
+  pressedPreviewBackdrop=false;
+});
+previewDialog.addEventListener('close',()=>{pressedPreviewBackdrop=false;sweepAnchor=null;});
 $('closePreview').addEventListener('click',closeDetails);
 $('preview').addEventListener('cancel',event=>{event.preventDefault();closeDetails();});
 const uploadTile=$('uploadBtn');
