@@ -170,14 +170,14 @@
         if (confirm("确认从后台列表删除该记录吗？这不会删除源文件；如需禁止访问请加入黑名单。")) {
           console.log("Yes")
           var requestOptions = {
-            method: 'GET',
+            method: 'DELETE',
             redirect: 'follow',
             //include authorization credientials
             credentials: 'include'
           };
 
           fetch("./api/manage/delete/" + key, requestOptions)
-            .then(response => response.text())
+            .then(response => { if(!response.ok)throw Error('Delete failed');return response.text(); })
             .then(result => { console.log(result); this.tableData.remove(index); })
             .catch(error => { alert("An error occurred while synchronizing data with the server, please check the network connection"); console.log('error', error) });
 
