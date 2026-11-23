@@ -1,3 +1,4 @@
+const { enableFixtureCatalog, catalogRequest } = require('./catalog-access-fixture');
 const assert=require('assert');const {createStudioDB}=require('./studio-runtime');const {createMockKV,makeContext}=require('./helpers');
 const request=(action,extra={})=>new Request('https://example.com/api/manage/bulk',{method:'POST',headers:{'Content-Type':'application/json',Origin:'https://example.com'},body:JSON.stringify({action,ids:['sample.jpg'],...extra})});
 describe('Studio authoritative D1 metadata',function(){
@@ -19,10 +20,10 @@ describe('Studio authoritative D1 metadata',function(){
   assert.strictEqual(m.fileName,'Original');assert.ok(m.tags.includes('Other window'));
   const saved=await run('edit_details',{fileName:'Fresh',category:'Shop',tags:['New'],metadataVersion:m.metadataVersion});assert.strictEqual(saved.success,1);
  });
- it('public catalog immediately observes D1 unpublish despite stale KV',async()=>{
-  env.SHOPIFY_AI_CATALOG_ENABLED='true';const catalog=(await import('../functions/api/shopify-assets.js')).onRequest;
-  await run('publish');assert.strictEqual((await (await catalog(makeContext({env,request:new Request('https://example.com/api/shopify-assets')}))).json()).count,1);
-  await run('unpublish');assert.strictEqual((await (await catalog(makeContext({env,request:new Request('https://example.com/api/shopify-assets')}))).json()).count,0);
+ it('restricted catalog immediately observes D1 unpublish despite stale KV',async()=>{
+  await enableFixtureCatalog(env);const catalog=(await import('../functions/api/shopify-assets.js')).onRequest;
+  await run('publish');assert.strictEqual((await (await catalog(makeContext({env,request:catalogRequest()}))).json()).count,1);
+  await run('unpublish');assert.strictEqual((await (await catalog(makeContext({env,request:catalogRequest()}))).json()).count,0);
  });
  it('legacy name/favorite handlers update D1 and do not overwrite tags',async()=>{
   await run('add_tags',{names:['Keep']});
