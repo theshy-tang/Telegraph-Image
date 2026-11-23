@@ -1,3 +1,5 @@
+const { enableFixtureCatalog, catalogRequest } = require('./catalog-access-fixture');
+const { createSQLiteD1 } = require('./sqlite-d1');
 const assert = require('assert');
 const { createMockKV, makeContext } = require('./helpers');
 
@@ -76,6 +78,8 @@ describe('Media Studio bulk API', function () {
 });
 
 describe('Media Studio curated catalog', function () {
+  let runtime;
+  afterEach(function () { if (runtime) runtime.close(); });
   it('does not expose liked-only media, but includes explicitly published media', async function () {
     const {onRequest}=await import('../functions/api/shopify-assets.js');
     const img_url=createMockKV({
@@ -84,7 +88,10 @@ describe('Media Studio curated catalog', function () {
       'blocked.png':{...img,aiPublished:true,ListType:'Block'},
       'private.mp4':{...img,aiPublished:true},
     });
-    const res=await onRequest(makeContext({request:new Request('https://example.com/api/shopify-assets'),env:{img_url,SHOPIFY_AI_CATALOG_ENABLED:'true'}}));
+    runtime = createSQLiteD1();
+    const env = { img_url, MEDIA_STUDIO_DB: runtime.db };
+    await enableFixtureCatalog(env);
+    const res=await onRequest(makeContext({request:catalogRequest(),env}));
     assert.strictEqual(res.status,200);
     const body=await res.json();
     assert.strictEqual(body.items.length,1);

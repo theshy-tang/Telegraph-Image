@@ -1,3 +1,4 @@
+const { enableFixtureCatalog, catalogRequest } = require('./catalog-access-fixture');
 const assert=require('assert');const {createSQLiteD1}=require('./sqlite-d1');const {createMockKV,makeContext,installFetchMock}=require('./helpers');
 function fixture(){const runtime=createSQLiteD1(),objects=new Map(),kv=createMockKV();const env={BASIC_USER:'test',BASIC_PASS:'fixture',MEDIA_STUDIO_DB:runtime.db,MEDIA_STUDIO_METADATA_D1:'true',SHOPIFY_AI_CATALOG_ENABLED:'true',STORAGE_PROVIDER:'r2',img_url:kv,img_r2:{async put(id,bytes,options){objects.set(id,{bytes,options})},async get(id){const o=objects.get(id);return o?{body:o.bytes,size:o.bytes.byteLength,httpMetadata:o.options?.httpMetadata}:null}}};kv.put=async()=>{throw Error('KV put() daily limit exceeded')};return {...runtime,env,objects};}
 const json=(payload,path='/api/manage/bulk')=>new Request('https://example.com'+path,{method:'POST',headers:{Origin:'https://example.com','Content-Type':'application/json'},body:JSON.stringify(payload)});
@@ -24,7 +25,8 @@ describe('Studio durable D1 registrations while KV writes are rejected',()=>{
    const edit={action:'edit_details',ids:['sample.png'],metadataVersion:0,fileName:'Sample',category:'',tags:['Banner'],width:1920,height:1080};
    const changed=await bulk(makeContext({env:f.env,request:json(edit)}));
    assert.strictEqual((await changed.json()).results[0].metadata.width,1920);
-   const search=async query=>(await (await catalog(makeContext({env:f.env,request:new Request('https://example.com/api/shopify-assets?cursor=records%3A&'+query)}))).json()).items;
+   await enableFixtureCatalog(f.env);
+   const search=async query=>(await (await catalog(makeContext({env:f.env,request:catalogRequest('https://example.com/api/shopify-assets?cursor=records%3A&'+query)}))).json()).items;
    assert.deepStrictEqual(await search('tag=banner&min_width=1920'),[]);
    await bulk(makeContext({env:f.env,request:json({action:'publish',ids:['sample.png']})}));
    const [item]=await search('tag=banner&min_width=1920&min_height=1080');
@@ -55,7 +57,8 @@ describe('Studio durable D1 registrations while KV writes are rejected',()=>{
    const saved=await metadata.getMetadata(f.env,id);
    assert.strictEqual(saved.metadataVersion,1);
    assert.deepStrictEqual(saved.tags,['横幅']);
-   const page=await (await catalog(makeContext({env:f.env,request:new Request(
+   await enableFixtureCatalog(f.env);
+   const page=await (await catalog(makeContext({env:f.env,request:catalogRequest(
     'https://example.com/api/shopify-assets?cursor=records%3A&min_width=1920&tag='+encodeURIComponent('横幅')
    )}))).json();
    assert.strictEqual(page.items[0].height,1080);
@@ -72,7 +75,8 @@ describe('Studio durable D1 registrations while KV writes are rejected',()=>{
   const response=await sync(makeContext({env:f.env,request:json({cursor:null},'/api/manage/catalog-sync')}));assert.strictEqual(response.status,200);assert.strictEqual(JSON.parse(f.sql.prepare('SELECT metadata FROM studio_media_inventory').get().metadata).ListType,'Block');
  }finally{f.close();}});
  it('publishes D1-only records only by explicit opt-in and checks fresh legacy moderation',async()=>{const f=fixture();try{
-  await records.registerStudioRecord(f.env,'sample.png',m);const get=async()=>{const all=[];let cursor;do{const request=new Request('https://example.com/api/shopify-assets'+(cursor?'?cursor='+encodeURIComponent(cursor):'')),page=await (await catalog(makeContext({env:f.env,request}))).json();all.push(...page.items);cursor=page.next_cursor;}while(cursor);return {count:all.length,items:all};};assert.strictEqual((await get()).count,0);
+  await enableFixtureCatalog(f.env);
+  await records.registerStudioRecord(f.env,'sample.png',m);const get=async()=>{const all=[];let cursor;do{const request=catalogRequest('https://example.com/api/shopify-assets'+(cursor?'?cursor='+encodeURIComponent(cursor):'')),page=await (await catalog(makeContext({env:f.env,request}))).json();all.push(...page.items);cursor=page.next_cursor;}while(cursor);return {count:all.length,items:all};};assert.strictEqual((await get()).count,0);
   const sm=await import('../functions/utils/studio-metadata.js');await sm.mutateStudioMetadata(f.db,'sample.png',m,x=>({...x,aiPublished:true,prompt:'private'}));let result=await get();assert.strictEqual(result.count,1);assert.ok(!JSON.stringify(result).includes('private'));
   await metadata.updateMetadata(f.env,'sample.png',x=>({...x,ListType:'Block'}));assert.strictEqual((await get()).count,0);
   f.sql.prepare('INSERT INTO studio_media_inventory VALUES (?,?,?,?,?)').run('legacy.png','image',1,JSON.stringify({...m,aiPublished:true}),1);
@@ -85,11 +89,12 @@ describe('Studio durable D1 registrations while KV writes are rejected',()=>{
   const bad=await recover(makeContext({env:f.env,request:json({id:'https://evil.invalid/file.png',fileName:'x',confirm:true},'/api/manage/recover-upload')}));assert.strictEqual(bad.status,400);assert.strictEqual(mock.calls.length,1);
  }finally{mock?.restore();f.close();}});
  it('requires verification success before creating any recovery record',async()=>{const f=fixture();const mock=installFetchMock(async()=>new Response(null,{status:302,headers:{Location:'https://evil.invalid'}}));try{const r=await recover(makeContext({env:f.env,request:json({id:'sample.png',fileName:'Recovered.png',confirm:true},'/api/manage/recover-upload')}));assert.strictEqual(r.status,502);assert.strictEqual(f.sql.prepare('SELECT COUNT(*) AS n FROM studio_media_records').get().n,0);}finally{mock.restore();f.close();}});
- it('preserves existing raw KV values and lists mirrored D1 items only once in the public catalog',async()=>{const f=fixture();try{
+ it('preserves existing raw KV values and lists mirrored D1 items only once in the restricted catalog',async()=>{const f=fixture();try{
   const kv=createMockKV({'sample.png':{value:'preserve-original-value',metadata:m}});f.env.img_url=kv;
   await records.registerStudioRecord(f.env,'sample.png',m);assert.strictEqual(kv.snapshot('sample.png').value,'preserve-original-value');
   const sm=await import('../functions/utils/studio-metadata.js');await sm.mutateStudioMetadata(f.db,'sample.png',m,x=>({...x,aiPublished:true}));
-  const items=[];let cursor;do{const page=await (await catalog(makeContext({env:f.env,request:new Request('https://example.com/api/shopify-assets?limit=1'+(cursor?'&cursor='+encodeURIComponent(cursor):''))}))).json();items.push(...page.items);cursor=page.next_cursor;}while(cursor);
+  await enableFixtureCatalog(f.env);
+  const items=[];let cursor;do{const page=await (await catalog(makeContext({env:f.env,request:catalogRequest('https://example.com/api/shopify-assets?limit=1'+(cursor?'&cursor='+encodeURIComponent(cursor):''))}))).json();items.push(...page.items);cursor=page.next_cursor;}while(cursor);
   assert.strictEqual(items.length,1);assert.strictEqual(items[0].url,'https://example.com/file/sample.png');
  }finally{f.close();}});
  it('rejects missing recovery confirmation and cross-origin requests before verification',async()=>{const f=fixture();try{

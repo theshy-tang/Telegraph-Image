@@ -252,6 +252,7 @@ body.working button[data-action]{opacity:.6}
 <button id="wallpaperOpen" type="button" class="ghost">背景设置</button>
 <button id="recoverUploadOpen" type="button" class="ghost" disabled>补录上传</button>
 <button id="indexMaintenanceOpen" type="button" class="ghost" disabled>索引维护</button>
+<button id="catalogAccessOpen" type="button" class="ghost">AI 接口通行证</button>
 <button id="tagManagerOpen" type="button" class="ghost" disabled>标签管理</button>
 </div></details>
 <button id="wallpaperMotion" type="button" class="ghost hidden">暂停背景</button>
@@ -344,6 +345,22 @@ body.working button[data-action]{opacity:.6}
 </section>
 </main>
 </div>
+<dialog id="catalogAccessDialog" class="folder-dialog" aria-labelledby="catalogAccessTitle">
+<div class="modalhead"><strong id="catalogAccessTitle">AI 接口通行证</strong><button id="catalogAccessClose" type="button" class="close" aria-label="关闭通行证设置">×</button></div>
+<div class="folder-fields">
+<p class="muted">通行证可读取已发布给 AI 的图片目录。关闭接口后，已知的原图链接仍可直接使用。</p>
+<p id="catalogAccessStatus" role="status"></p>
+<div id="catalogAccessSecret" class="hidden">
+<label for="catalogAccessKey">新通行证仅在此显示一次</label>
+<input id="catalogAccessKey" readonly autocomplete="off" spellcheck="false" class="search">
+<button id="catalogAccessCopy" type="button" class="ghost">复制通行证</button>
+</div>
+</div>
+<div class="folder-dialog-actions">
+<button type="button" id="catalogAccessIssue" class="ghost" disabled>生成通行证</button>
+<button type="button" id="catalogAccessRevoke" class="ghost" disabled>撤销通行证</button>
+<button type="button" id="catalogAccessToggle" class="primary" disabled>开启接口</button>
+</div></dialog>
 <dialog id="indexMaintenance" class="folder-dialog" aria-labelledby="indexMaintenanceTitle">
 <div class="modalhead"><strong id="indexMaintenanceTitle">索引检查与补齐</strong><button type="button" class="close" id="indexMaintenanceClose" aria-label="关闭索引维护">×</button></div>
 <div class="folder-fields"><p class="muted">检查整个 KV 媒体目录，补齐全库检索清单。仅更新派生索引，不覆盖已编辑资料或删除标记，也不删除扫描中暂未出现的记录。</p><p id="indexStats" role="status">读取统计中…</p><p id="indexProgress" role="status"></p>
@@ -1527,7 +1544,7 @@ function preview(x){
     if(await detailWrite(d.x.liked?'unfavorite':'favorite'))refreshActionLabels();
   });
   publish.addEventListener('click',async()=>{
-    if(!d.x.published&&!confirm('确认将此图片发布到无需登录的公开 AI 素材目录？'))return;
+    if(!d.x.published&&!confirm('确认将此图片发布到通行证持有者可访问的 AI 素材目录？'))return;
     if(await detailWrite(d.x.published?'unpublish':'publish'))refreshActionLabels();
   });
   const actions=elt('div','detail-actions');
@@ -1634,7 +1651,7 @@ async function runAction(action,override=null){
   const additional=override||actionPayload(action);if(additional===null)return;
   if(action==='clear_folder')action='move_folder';
   const ids=[...state.selected];
-  if(action==='publish'&&!confirm('将 '+ids.length+' 个媒体标记为 AI 已发布。符合图片格式的文件会出现在无需登录的公开目录里，确认继续？'))return;
+  if(action==='publish'&&!confirm('将 '+ids.length+' 个媒体标记为 AI 已发布。符合条件的图片会出现在通行证持有者可访问的目录里，确认继续？'))return;
   state.busy=true;setBusyUI(true);
   let ok=0,fail=0;const pending=new Set(ids),failureMessages=new Set();
   try{
@@ -1842,6 +1859,87 @@ $('loginForm').addEventListener('submit',async e=>{
 });
 $('tagManagerOpen').addEventListener('click',openTagManager);
 $('indexMaintenanceOpen').addEventListener('click',openIndexMaintenance);
+const accessDialog = $('catalogAccessDialog');
+const accessKey = $('catalogAccessKey');
+const accessStatus = $('catalogAccessStatus');
+const accessIssue = $('catalogAccessIssue');
+const accessRevoke = $('catalogAccessRevoke');
+const accessToggle = $('catalogAccessToggle');
+const accessClose = $('catalogAccessClose');
+let catalogAccess;
+let accessBusy = false;
+
+function clearCatalogKey() {
+  accessKey.value = '';
+  $('catalogAccessSecret').classList.add('hidden');
+}
+
+function renderCatalogAccessControls() {
+  accessIssue.disabled = accessBusy || !catalogAccess?.configured;
+  accessRevoke.disabled = accessBusy || !catalogAccess?.hasKey;
+  accessToggle.disabled = accessBusy || !catalogAccess?.configured || !catalogAccess.hasKey;
+  accessClose.disabled = accessBusy;
+  accessIssue.textContent = catalogAccess?.hasKey ? '更换通行证' : '生成通行证';
+  accessToggle.textContent = catalogAccess?.enabled ? '关闭接口' : '开启接口';
+}
+
+async function updateCatalogAccess(action) {
+  accessBusy = true;
+  renderCatalogAccessControls();
+  accessStatus.textContent = action ? '正在保存…' : '正在读取接口状态…';
+  try {
+    const result = await api('/api/manage/catalog-access', action ? {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action }),
+    } : {});
+    catalogAccess = { configured: result.configured, enabled: result.enabled, hasKey: result.hasKey };
+    accessStatus.textContent = !result.configured ? '当前部署未启用 AI 素材接口。'
+      : result.enabled ? '接口已开启，须使用通行证调用。'
+      : result.hasKey ? '接口已关闭。开启后可继续使用现有通行证。'
+      : '接口已关闭。请先生成通行证。';
+    if (result.key) {
+      accessKey.value = result.key;
+      $('catalogAccessSecret').classList.remove('hidden');
+    } else if (action === 'revoke') {
+      clearCatalogKey();
+    }
+  } catch {
+    catalogAccess = null;
+    accessStatus.textContent = '未能确认接口状态，请关闭窗口后重新打开并检查。';
+  } finally {
+    accessBusy = false;
+    renderCatalogAccessControls();
+  }
+}
+
+$('catalogAccessOpen').addEventListener('click', () => {
+  $('studioTools').open = false;
+  catalogAccess = null;
+  accessDialog.showModal();
+  updateCatalogAccess();
+});
+accessClose.addEventListener('click', () => accessDialog.close());
+accessDialog.addEventListener('cancel', event => { if (accessBusy) event.preventDefault(); });
+accessDialog.addEventListener('close', clearCatalogKey);
+accessIssue.addEventListener('click', () => {
+  if (catalogAccess?.hasKey && !confirm('更换后旧通行证立即失效，接口会关闭。继续更换？')) return;
+  updateCatalogAccess('issue');
+});
+accessToggle.addEventListener('click', () => updateCatalogAccess(catalogAccess.enabled ? 'disable' : 'enable'));
+accessRevoke.addEventListener('click', () => {
+  if (confirm('撤销后此通行证永久失效。继续撤销？')) updateCatalogAccess('revoke');
+});
+$('catalogAccessCopy').addEventListener('click', async () => {
+  try {
+    await navigator.clipboard.writeText(accessKey.value);
+    accessStatus.textContent = '已复制通行证。';
+  } catch {
+    accessKey.select();
+    accessStatus.textContent = '请手动复制选中的通行证。';
+  }
+});
+
 $('indexMaintenanceClose').addEventListener('click',closeIndexMaintenance);
 $('indexMaintenance').addEventListener('cancel',event=>{if(indexScan.running){event.preventDefault();indexScan.controller.abort();}else indexScan.statsGeneration++;});
 $('indexResume').addEventListener('click',()=>runIndexScan(false));

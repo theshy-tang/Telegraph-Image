@@ -1,3 +1,4 @@
+import {acceptsCatalogKey, catalogAllowedByDeployment, readCatalogAccess} from '../utils/ai-catalog-access.js';
 import {sourceCatalogPage} from '../utils/studio-records.js';
 import {imageDimensions,overlayStudioMetadata} from '../utils/studio-metadata.js';
 /**
@@ -12,7 +13,7 @@ import {imageDimensions,overlayStudioMetadata} from '../utils/studio-metadata.js
 const IMAGE_FILE = /^[A-Za-z0-9_-]+\.(?:jpe?g|png|gif|webp|avif|apng|bmp)$/i;
 const INTERNAL_KEY = /^[a-z][a-z0-9-]*:/i;
 
-function respond(data, status = 200) {
+function respond(data, status = 200, extraHeaders = {}) {
   return new Response(JSON.stringify(data, null, 2), {
     status,
     headers: {
@@ -20,6 +21,7 @@ function respond(data, status = 200) {
       'Cache-Control': 'no-store',
       'X-Content-Type-Options': 'nosniff',
       'X-Robots-Tag': 'noindex, nofollow',
+      ...extraHeaders,
     },
   });
 }
@@ -32,10 +34,20 @@ export async function onRequest(context) {
     return respond({ error: 'Method not allowed' }, 405);
   }
 
-  // Explicit opt-in: a new deployment alone does not publish anything.
-  if (env.SHOPIFY_AI_CATALOG_ENABLED !== 'true') {
+  // The deployment can enforce a hard stop regardless of the Studio setting.
+  if (!catalogAllowedByDeployment(env)) {
     return respond({ error: 'Not found' }, 404);
   }
+  try {
+    const access = await readCatalogAccess(env.MEDIA_STUDIO_DB);
+    if (access?.enabled !== 1) return respond({ error: 'Not found' }, 404);
+    if (!await acceptsCatalogKey(request, access.key_hash)) {
+      return respond({ error: 'Unauthorized' }, 401, { 'WWW-Authenticate': 'Bearer' });
+    }
+  } catch {
+    return respond({ error: 'Catalog access temporarily unavailable' }, 503);
+  }
+
   if (!env.img_url || typeof env.img_url.list !== 'function') {
     return respond({ error: 'Image catalog KV binding is unavailable' }, 503);
   }
@@ -112,7 +124,7 @@ export async function onRequest(context) {
   return respond({
     version: 1,
     purpose: 'shopify-image-selection',
-    visibility: 'public-curated',
+    visibility: 'restricted-curated',
     count: items.length,
     scanned: (listing.keys || []).length,
     items,

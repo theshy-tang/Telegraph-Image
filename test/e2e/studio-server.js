@@ -9,6 +9,8 @@ const {createStudioDB}=require('../studio-runtime');const {createMockKV}=require
  await env.img_url.put('r2-download.png','',{metadata:{fileName:'Download fixture.png',tags:['Download'],albums:[],fileSize:68,TimeStamp:1700000000300}});
  const sync=await import('../../functions/api/manage/catalog-sync.js');
  const exported=await import('../../functions/api/manage/export.js');const download=await import('../../functions/api/manage/download/[id].js');
+ const catalogAccess=await import('../../functions/api/manage/catalog-access.js');
+ const publicCatalog=await import('../../functions/api/shopify-assets.js');
  const catalog=await import('../../functions/utils/studio-catalog.js');
  // A fixture beyond the first 100 KV records makes unloaded-result acceptance reproducible.
  for(let n=0;n<Number(process.env.STUDIO_FIXTURE_MEDIA_COUNT||105);n++)await env.img_url.put('fixture'+String(n).padStart(3,'0')+'.jpg','',{metadata:{fileName:'Fixture '+n,tags:['Fixture'],albums:[],TimeStamp:1700000000000+n}});
@@ -32,7 +34,14 @@ const {createStudioDB}=require('../studio-runtime');const {createMockKV}=require
    const chunks=[];for await(const chunk of req)chunks.push(chunk);
    const request=new Request(url,{method:req.method,headers:req.headers,...(!['GET','HEAD'].includes(req.method)?{body:Buffer.concat(chunks)}:{})});
    const id=decodeURIComponent(url.pathname.split('/').pop());let handler;
-   if(url.pathname==='/api/manage/recover-upload')handler=recover.onRequestPost;
+   if(url.pathname==='/api/shopify-assets') {
+    const response=await publicCatalog.onRequest({env,request});
+    res.writeHead(response.status,Object.fromEntries(response.headers));
+    res.end(Buffer.from(await response.arrayBuffer()));
+    return;
+   }
+   if(url.pathname==='/api/manage/catalog-access')handler=req.method==='GET'?catalogAccess.onRequestGet:catalogAccess.onRequestPost;
+   else if(url.pathname==='/api/manage/recover-upload')handler=recover.onRequestPost;
    else if(url.pathname==='/api/manage/record-sync')handler=recordSync.onRequestPost;
    else if(url.pathname==='/api/manage/catalog-sync')handler=req.method==='GET'?sync.onRequestGet:sync.onRequestPost;
    else if(url.pathname==='/api/manage/export')handler=exported.onRequestPost;
