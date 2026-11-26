@@ -1,6 +1,6 @@
 import {sourceRecord} from '../../utils/studio-records.js';
 import {parseAssetDetails,ASSET_FIELDS} from '../../utils/studio-asset-details.js';
-import {imageDimensions,metadataD1Enabled,readStudioMetadata,mutateStudioMetadata} from '../../utils/studio-metadata.js';
+import {cleanNames,imageDimensions,metadataD1Enabled,readStudioMetadata,mutateStudioMetadata} from '../../utils/studio-metadata.js';
 import {hasStudioD1,getStudioFolder,getStudioMediaFolders} from '../../utils/studio-d1.js';
 /**
  * Media Studio bulk metadata updates.
@@ -26,13 +26,6 @@ function json(body, status = 200) {
       'X-Content-Type-Options': 'nosniff'
     }
   });
-}
-
-function cleanNames(value, maxLength, maxCount = 15) {
-  if (!Array.isArray(value) || value.length > maxCount) return null;
-  const names = value.map(x => typeof x === 'string' ? x.trim() : '');
-  if (!names.every(x => x.length > 0 && x.length <= maxLength && !/[\u0000-\u001f\u007f<>]/.test(x))) return null;
-  return [...new Set(names)];
 }
 
 function safeStringList(value) {

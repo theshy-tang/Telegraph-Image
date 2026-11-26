@@ -1,3 +1,5 @@
+import {cleanNames} from './studio-metadata.js';
+
 // Studio policy is separate from legacy document uploads.
 export function studioUploadLimit(env){
   const raw=env.STUDIO_MAX_UPLOAD_BYTES;
@@ -25,4 +27,15 @@ export async function readStudioUpload(request,limit){
   if(file.name.length>160||/[\u0000-\u001f\u007f<>]/.test(file.name))throw uploadError('Invalid media filename',400);
   if(!/\.(?:png|jpe?g|gif|webp|bmp|avif|apng|ico|mp4|webm|mov|ogg|m4v|mkv|avi)$/i.test(file.name))throw uploadError('Unsupported media extension',415);
   return form;
+}
+
+export function readStudioUploadTags(form){
+  const fields=form.getAll('tags');
+  if(!fields.length)return [];
+  if(fields.length!==1||typeof fields[0]!=='string')throw uploadError('Invalid upload tags',400);
+  let raw;
+  try{raw=JSON.parse(fields[0]);}catch{throw uploadError('Invalid upload tags',400);}
+  const tags=cleanNames(raw,48,30);
+  if(!tags)throw uploadError('Upload tags must contain at most 30 valid names of up to 48 characters each',400);
+  return tags;
 }
