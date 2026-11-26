@@ -208,6 +208,10 @@ body.working button[data-action]{opacity:.6}
 #grid .tile:hover .details,#grid .tile:focus-within .details,#grid .tile.picked .details,#grid[data-info="detailed"] .details{opacity:1}
 #grid[data-info="compact"] .sub{display:none}#grid .tags{bottom:auto;top:12px;right:10px}
 @media(hover:none){#grid .details{opacity:1}}@media(max-width:540px){.gallery-view{gap:10px 14px}.gallery-size input{width:90px}}
+.upload-tag-list{max-height:35vh;overflow:auto;margin:0;padding-inline-start:1.35rem;overflow-wrap:anywhere}
+.upload-tag-list li+li{margin-top:.5rem}
+.upload-tag-list:empty{display:none}
+.upload-tag-issues{max-height:20vh;color:var(--paper-muted,#627086)}
 .upload-feedback{position:sticky;top:12px;z-index:20;display:flex;justify-content:space-between;gap:15px;align-items:flex-start;padding:15px 18px;margin:0 0 18px;border:1px solid #b9c8b8;border-radius:12px;background:var(--paper-surface,#faf9f6);color:var(--paper-text,#343a38);box-shadow:0 4px 18px #34463712}.upload-feedback-message{font-size:12px;line-height:1.8;white-space:pre-wrap;overflow-wrap:anywhere;max-height:150px;overflow:auto}.upload-feedback button{flex:none}
 </style>
 <link rel="stylesheet" href="/studio/theme-paper.css">
@@ -258,8 +262,8 @@ body.working button[data-action]{opacity:.6}
 <button id="wallpaperMotion" type="button" class="ghost hidden">暂停背景</button>
 <button id="reload" type="button" class="ghost">刷新</button><button id="uploadBtn" class="upload-tile" type="button">
   <span class="upload-tile-icon" aria-hidden="true">↑</span>
-  <span><strong>上传素材</strong><small>点击选择或拖入图片、视频</small></span>
-</button><input id="fileInput" type="file" accept="image/*,video/*" multiple class="hidden"></div>
+  <span><strong>上传素材</strong><small>点击选择或拖入素材与标签清单</small></span>
+</button><input id="fileInput" type="file" accept="image/*,video/*,.json" multiple class="hidden"></div>
 </div>
 <details id="uploadFeedback" class="upload-feedback hidden">
 <summary id="uploadFeedbackTitle">上传任务</summary>
@@ -433,6 +437,17 @@ body.working button[data-action]{opacity:.6}
 <div class="folder-dialog-actions"><button type="button" class="ghost" id="tagCancel">取消</button><button type="submit" class="primary" id="tagSave">应用标签</button></div>
 </form></dialog>
 <dialog id="preview"><div class="modalhead"><strong>素材详情</strong><button class="close" id="closePreview" type="button" aria-label="关闭素材详情">✕</button></div><div id="previewMedia"></div><div class="modalbody" tabindex="0" role="region" aria-label="素材资料"><div class="modalinfo" id="previewInfo"></div></div></dialog>
+<dialog id="uploadTagDialog" class="wallpaper-dialog" aria-labelledby="uploadTagTitle" aria-describedby="uploadTagSummary">
+<div class="modalhead"><strong id="uploadTagTitle">核对上传标签</strong><button type="button" class="close" id="uploadTagClose" aria-label="关闭上传标签预览">✕</button></div>
+<form id="uploadTagForm">
+<div class="wallpaper-fields">
+<p id="uploadTagSummary" class="muted"></p>
+<ul id="uploadTagFiles" class="upload-tag-list"></ul>
+<ul id="uploadTagIssues" class="upload-tag-list upload-tag-issues" aria-label="清单问题"></ul>
+</div>
+<div class="wallpaper-actions"><button type="button" id="uploadTagCancel" class="ghost">取消</button><button id="uploadTagSubmit" type="submit" class="primary">确认上传</button></div>
+</form>
+</dialog>
 <dialog id="recoverUploadDialog" class="wallpaper-dialog" aria-labelledby="recoverUploadTitle">
 <div class="modalhead"><strong id="recoverUploadTitle">补录已存储的文件</strong><button type="button" class="close" id="recoverUploadClose" aria-label="关闭补录">✕</button></div>
 <form id="recoverUploadForm"><div class="wallpaper-fields">
@@ -1698,11 +1713,80 @@ function showUploadFeedback(message,title='上传任务',{collapsed=false}={}){
   feedback.classList.remove('hidden');
   feedback.open=!collapsed;
 }
-async function upload(files){
+function matchUploadTags(files, manifest){
+  if(manifest?.version!==1||!Array.isArray(manifest.items))throw Error('清单格式无效，需要 version: 1 和 items 列表。');
+  const entries=new Map(), counts=new Map(), issues=[];
+  for(const file of files)counts.set(file.name,(counts.get(file.name)||0)+1);
+  for(const [index,item] of manifest.items.entries()){
+    const name=item?.fileName;
+    if(typeof name!=='string'||!name.length||name.length>160||/[\u0000-\u001f\u007f<>/\\]/.test(name)){
+      issues.push('清单第 '+(index+1)+' 项缺少有效原文件名。');
+      continue;
+    }
+    if(entries.has(name)){
+      entries.set(name,{reason:'清单重复列出该文件名'});
+      continue;
+    }
+    const raw=item.tags;
+    if(!Array.isArray(raw)||raw.length>30||raw.some(tag=>typeof tag!=='string'||!tag.trim())){
+      entries.set(name,{reason:'标签格式无效，需填写最多 30 个非空标签'});
+      continue;
+    }
+    try{entries.set(name,{tags:detailTagList(raw)});}
+    catch(error){entries.set(name,{reason:error.message});}
+  }
+  for(const [name,entry] of entries){
+    if(!counts.has(name))issues.push(name+'：未选入上传批次'+(entry.reason?'，'+entry.reason:'')+'。');
+  }
+  const tagsByName=new Map();
+  const rows=files.map(({name})=>{
+    const entry=entries.get(name);
+    const reason=counts.get(name)>1?'本批次存在同名素材':entry?.reason||(!entry?'清单未匹配到此文件':'');
+    if(!reason&&entry.tags.length)tagsByName.set(name,entry.tags);
+    return {name,tags:tagsByName.get(name)||[],reason};
+  });
+  return {tagsByName,rows,issues};
+}
+let uploadDraft=null, uploadSelection=0;
+async function prepareUpload(files){
+  if(state.busy||IS_PREVIEW||$('uploadTagDialog').open||!files.length)return;
+  const selection=++uploadSelection;
+  const manifests=files.filter(file=>file.name.toLowerCase()==='media-tags.json');
+  const media=files.filter(file=>!manifests.includes(file)&&(
+    /^(image|video)\//i.test(file.type)||/\.(?:png|jpe?g|gif|webp|bmp|avif|apng|ico|mp4|webm|mov|ogg|m4v|mkv|avi)$/i.test(file.name)
+  ));
+  if(manifests.length>1){toast('每批请选择一份 media-tags.json。');return;}
+  if(media.length+manifests.length!==files.length||!media.length){
+    toast('请选择图片或视频。如果要导入标签，请同时选择 media-tags.json。');
+    return;
+  }
+  if(!manifests.length){await upload(media);return;}
+  const dialog=$('uploadTagDialog'),submit=$('uploadTagSubmit');
+  let preview,error='';
+  try{
+    if(manifests[0].size>1024*1024)throw Error('标签清单不能超过 1 MiB。');
+    let manifest;
+    try{manifest=JSON.parse((await manifests[0].text()).replace(/^\uFEFF/,''));}
+    catch{throw Error('无法读取 media-tags.json，请检查 JSON 格式后重新选择。');}
+    preview=matchUploadTags(media,manifest);
+  }catch(err){error=err.message;}
+  if(selection!==uploadSelection||state.busy||dialog.open)return;
+  const count=preview?.tagsByName.size||0, untagged=media.length-count;
+  $('uploadTagSummary').textContent=error||'共 '+media.length+' 项，'+count+' 项将导入标签'+(untagged?'，'+untagged+' 项将无标签上传':'')+'。';
+  $('uploadTagFiles').replaceChildren(...(preview?.rows||[]).map(row=>elt('li','',row.name+' · '+(row.tags.length?row.tags.join('、'):row.reason||'清单中未填写标签'))));
+  const issues=preview?.issues||[], visibleIssues=issues.slice(0,50);
+  if(issues.length>visibleIssues.length)visibleIssues.push('另有 '+(issues.length-visibleIssues.length)+' 项清单问题。');
+  $('uploadTagIssues').replaceChildren(...visibleIssues.map(issue=>elt('li','',issue)));
+  submit.disabled=Boolean(error);
+  submit.textContent=error?'确认上传':count?'确认上传 '+media.length+' 项':'无标签上传 '+media.length+' 项';
+  uploadDraft=preview?{files:media,tagsByName:preview.tagsByName}:null;
+  dialog.showModal();
+}
+async function upload(files, tagsByName){
   if(state.busy||!files?.length||IS_PREVIEW)return;
-  if(!confirm('上传 '+files.length+' 个文件到图床？新素材不会自动收藏或发布给 AI。'))return;
+  if(!tagsByName&&!confirm('上传 '+files.length+' 个文件到图床？新素材不会自动收藏或发布给 AI。'))return;
   state.busy=true;setBusyUI(true);$('uploadBtn').disabled=true;
-  let good=0,failed=0;const confirmed=[],errors=[],warnings=[];
+  let good=0,failed=0,tagged=0;const confirmed=[],errors=[],warnings=[];
   showUploadFeedback('准备上传 '+files.length+' 个文件。正在等待服务器确认，请勿重复上传。');
   try{
     for(const file of files){
@@ -1710,6 +1794,8 @@ async function upload(files){
       const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),120000);
       try{
         const fd=new FormData();fd.append('file',file);
+        const tags=tagsByName?.get(file.name);
+        if(tags?.length)fd.append('tags',JSON.stringify(tags));
         const response=await fetch('/api/manage/upload',{method:'POST',headers:authHeader(),body:fd,cache:'no-store',signal:controller.signal});
         if(!response.ok){let body;try{body=await response.json();}catch{}
           const messages={MEDIA_D1_REGISTER_FAILED:'文件已到存储，但 D1 登记失败，请保存恢复链接',MEDIA_KV_WRITE_LIMIT:'文件已到存储，但 KV 写入被额度或限流限制；尚未登记到素材库',MEDIA_KV_WRITE_FAILED:'文件已到存储，但素材目录登记失败',MEDIA_CATALOG_WRITE_FAILED:'文件记录已保存，但全库索引登记失败，可使用索引维护补录',MEDIA_LINK_WRITE_FAILED:'原文件已保存，但短链接登记失败'};
@@ -1720,13 +1806,18 @@ async function upload(files){
         const result=await response.json();if(!Array.isArray(result)||!result[0]?.src)throw Error('上传响应异常');
         if(result[0].record&&isSafeId(result[0].record.name))confirmed.push(normalize(result[0].record));
         if(result[0].registration?.kvPending)warnings.push(file.name+'：已保存到 D1，旧版 KV 目录待同步。');
+        if(tags?.length){
+          const savedTags=result[0].record?.metadata?.tags;
+          if(Array.isArray(savedTags)&&tags.every(tag=>savedTags.includes(tag)))tagged++;
+          else warnings.push(file.name+'：文件已上传，标签未获确认。');
+        }
         good++;
       }catch(error){failed++;errors.push(file.name+'：'+(error.name==='AbortError'?'服务器未在120秒内确认，结果未知。请刷新检查，勿立即重复上传。':error.message));}
       finally{clearTimeout(timer);}
       $('status').textContent='上传进度 '+(good+failed)+' / '+files.length;
     }
   }finally{state.busy=false;setBusyUI(false);$('uploadBtn').disabled=IS_PREVIEW;}
-  const summary='上传处理结束：成功 '+good+' 项，失败或未确认 '+failed+' 项。'+(good?'新素材位于未归类。':'')+(errors.length?'\n'+errors.slice(0,3).join('\n'):'')+(warnings.length?'\n'+warnings.slice(0,3).join('\n'):'');
+  const summary='上传处理结束：成功 '+good+' 项，失败或未确认 '+failed+' 项。'+(good?'新素材位于未归类。':'')+(tagsByName?.size?'标签导入已确认 '+tagged+' / '+tagsByName.size+' 项。':'')+(errors.length?'\n'+errors.slice(0,3).join('\n'):'')+(warnings.length?'\n'+warnings.slice(0,3).join('\n'):'');
   showUploadFeedback(summary,'上传完成：'+good+' 项成功'+(failed?'，'+failed+' 项待确认':''),{collapsed:!failed});toast('上传成功 '+good+'，失败或未确认 '+failed);
   await loadPage(true);
   // A newly uploaded KV key may not be visible in list() yet. Keep only
@@ -2104,16 +2195,20 @@ uploadTile.addEventListener('drop',event=>{
   event.preventDefault();
   uploadTile.classList.remove('drag-over');
   if(IS_PREVIEW||state.busy||uploadTile.disabled)return;
-  const dropped=[...(event.dataTransfer?.files||[])];
-  const files=dropped.filter(file=>/^(image|video)\//i.test(file.type));
-  if(files.length!==dropped.length||!files.length){
-    toast('请拖入图片或视频文件。');
-    return;
-  }
-  upload(files);
+  prepareUpload([...(event.dataTransfer?.files||[])]);
 });
 $('uploadFeedbackClose').addEventListener('click',()=>$('uploadFeedback').classList.add('hidden'));
-$('fileInput').addEventListener('change',e=>{upload([...e.target.files]);e.target.value='';});
+$('fileInput').addEventListener('change',e=>{prepareUpload([...e.target.files]);e.target.value='';});
+$('uploadTagDialog').addEventListener('close',()=>{if(!$('uploadTagDialog').open)uploadDraft=null;});
+for(const id of ['uploadTagClose','uploadTagCancel'])$(id).addEventListener('click',()=>$('uploadTagDialog').close());
+$('uploadTagForm').addEventListener('submit',event=>{
+  event.preventDefault();
+  if(!uploadDraft||state.busy)return;
+  const {files,tagsByName}=uploadDraft;
+  uploadDraft=null;
+  $('uploadTagDialog').close();
+  upload(files,tagsByName);
+});
 })();
 </script>
 </body>

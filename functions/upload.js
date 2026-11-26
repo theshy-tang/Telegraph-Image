@@ -2,12 +2,12 @@ import {recordsReady,registerStudioRecord} from './utils/studio-records.js';
 import {catalogStatus} from './utils/studio-catalog.js';
 import {cutoverReadOnly,cutoverResponse} from './utils/cutover.js';
 import {indexStudioMedia} from './utils/studio-catalog.js';
-import {readStudioUpload,studioUploadLimit,StudioUploadError} from './utils/studio-upload.js';
+import {readStudioUpload,readStudioUploadTags,studioUploadLimit,StudioUploadError} from './utils/studio-upload.js';
 import {metadataD1Enabled} from './utils/studio-metadata.js';
 import { authenticateUploadRequest, uploadAuthMode } from "./utils/auth.js";
 import { jsonResponse } from "./utils/http.js";
 import { createDefaultMetadata, putMetadata } from "./utils/metadata.js";
-import { allocateShortId, isShortUrlsEnabled, putShortLink } from "./utils/shortlink.js";
+import { allocateShortId, isShortUrlsEnabled, putShortLink, shortIdLength } from "./utils/shortlink.js";
 import { getUploadProvider } from "./storage/index.js";
 
 export async function onRequestPost(context) {
@@ -43,11 +43,24 @@ export async function performUpload(context, options={}) {
         const fileName = uploadFile.name;
         const fileExtension = fileName.split('.').pop().toLowerCase();
 
+        const tags = studio ? readStudioUploadTags(formData) : [];
+        const metadata = createDefaultMetadata(fileName, {
+            fileName, fileSize: uploadFile.size, provider: provider.key,
+            ...(studio ? { aiPublished: false } : {}),
+            ...(tags.length ? { tags } : {}),
+        });
+        const useShortId = !durable && env.img_url && isShortUrlsEnabled(env);
+        if (tags.length && !durable) {
+            // Check the legacy KV metadata limit before storing the original.
+            const kvMetadata = useShortId ? { ...metadata, shortId: '0'.repeat(shortIdLength(env)) } : metadata;
+            if (new TextEncoder().encode(JSON.stringify(kvMetadata)).byteLength > 1024) {
+                throw new StudioUploadError('Upload tags exceed the legacy metadata size limit', 400);
+            }
+        }
+
         const longId = await provider.upload(env, uploadFile, { fileName, fileExtension });
         recoveryId=longId;
         let shortId = null;
-
-        const metadata=createDefaultMetadata(longId,{fileName,fileSize:uploadFile.size,provider:provider.key,...(studio?{aiPublished:false}:{})});
         if(durable){
             stage='d1_record';
             const saved=await registerStudioRecord(env,longId,metadata);
@@ -56,7 +69,7 @@ export async function performUpload(context, options={}) {
         // 将文件信息保存到 KV 存储
         if (env.img_url) {
             stage='media_record';
-            if (isShortUrlsEnabled(env)) {
+            if (useShortId) {
                 shortId = await allocateShortId(env);
             }
 

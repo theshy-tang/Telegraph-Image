@@ -11,6 +11,14 @@ export function imageDimensions(metadata){
   const valid=value=>Number.isInteger(value)&&value>0&&value<=100000;
   return valid(width)&&valid(height)?{width,height}:{};
 }
+
+export function cleanNames(value, maxLength, maxCount = 15) {
+  if (!Array.isArray(value) || value.length > maxCount) return null;
+  const names = value.map(x => typeof x === 'string' ? x.trim() : '');
+  if (!names.every(x => x.length > 0 && x.length <= maxLength && !/[\u0000-\u001f\u007f<>]/.test(x))) return null;
+  return [...new Set(names)];
+}
+
 export function editableMetadata(m,id){
   return {...imageDimensions(m),fileName:typeof m.fileName==='string'?m.fileName:id,liked:m.liked===true,aiPublished:m.aiPublished===true,
     tags:Array.isArray(m.tags)?m.tags.filter(x=>typeof x==='string'):[],
