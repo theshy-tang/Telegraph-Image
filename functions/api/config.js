@@ -1,4 +1,6 @@
-import { isEmptyBinding, jsonResponse } from '../utils/http.js';
+import {cutoverReadOnly} from '../utils/cutover.js';
+import {uploadRequiresAuth} from '../utils/auth.js';
+import { jsonResponse } from '../utils/http.js';
 import { isShortUrlsEnabled } from '../utils/shortlink.js';
 import { getSetupStatus } from '../utils/setup-status.js';
 
@@ -13,7 +15,7 @@ export async function onRequestGet(context) {
         siteTitle: env.SITE_TITLE || env.SITE_NAME || 'Telegraph-Image | 免费图床',
         backgroundImage: env.SITE_BACKGROUND || '',
         enableShortUrls: isShortUrlsEnabled(env),
-        uploadRequiresAuth: !isEmptyBinding(env.UPLOAD_BASIC_USER) && !isEmptyBinding(env.UPLOAD_BASIC_PASS),
+        uploadRequiresAuth: uploadRequiresAuth(env),
         showAdminEntry: env.HIDE_ADMIN_ENTRY !== 'true',
         // Deployment self-check so a misconfigured site says so instead of
         // failing silently on the first upload. Enum status only, no values.
@@ -21,6 +23,6 @@ export async function onRequestGet(context) {
         setup: setup.checks,
         problems: setup.problems,
     }, {
-        headers: { 'Cache-Control': 'no-store' },
+        headers: { 'Cache-Control': 'no-store',...(cutoverReadOnly(env)?{'X-Media-Studio-Read-Only':'1'}:{}) },
     });
 }

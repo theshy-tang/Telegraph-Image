@@ -63,6 +63,52 @@ describe('file proxy function', function () {
     assert.ok(Number.isFinite(stored.metadata.TimeStamp));
   });
 
+  it('serves repeated existing images without any KV writes', async function () {
+    const onRequest=await getOnRequest();
+    const img_url=createMockKV({'cat.png':{...baseMetadata,tags:['keep'],description:'keep private'}});
+    img_url.put=async()=>{throw new Error('KV write limit exceeded');};
+    fetchMock=installFetchMock(async()=>new Response('image-body',{headers:{'Content-Type':'image/png'}}));
+    for(let i=0;i<3;i++){
+      const res=await onRequest(makeContext({request:new Request('https://example.com/file/cat.png'),env:{img_url},params:{id:'cat.png'}}));
+      assert.strictEqual(res.status,200);assert.strictEqual(await res.text(),'image-body');
+    }
+    assert.deepStrictEqual(img_url.snapshot('cat.png').metadata.tags,['keep']);
+  });
+
+  it('serves missing records even when read-through initialization cannot persist', async function () {
+    const onRequest=await getOnRequest(),img_url=createMockKV();
+    img_url.put=async()=>{throw new Error('KV write limit exceeded');};
+    fetchMock=installFetchMock(async()=>new Response('image-body'));
+    const res=await onRequest(makeContext({request:new Request('https://example.com/file/cat.png'),env:{img_url},params:{id:'cat.png'}}));
+    assert.strictEqual(res.status,200);assert.strictEqual(await res.text(),'image-body');
+  });
+
+  it('keeps HEAD read-only while enforcing stored restrictions', async function () {
+    const onRequest=await getOnRequest(),img_url=createMockKV();
+    fetchMock=installFetchMock(async()=>new Response(null,{headers:{'Content-Type':'image/png'}}));
+    const context=()=>makeContext({request:new Request('https://example.com/file/cat.png',{method:'HEAD'}),env:{img_url,ModerateContentApiKey:'test-key'},params:{id:'cat.png'}});
+    assert.strictEqual((await onRequest(context())).status,200);
+    assert.strictEqual(fetchMock.calls.length,1);assert.strictEqual(img_url.operations.put.length,0);
+    await img_url.put('cat.png','',{metadata:{...baseMetadata,ListType:'Block'}});
+    assert.strictEqual((await onRequest(context())).status,302);
+  });
+
+  it('preserves full metadata when saving a changed verdict', async function () {
+    const onRequest=await getOnRequest(),img_url=createMockKV({'cat.png':{...baseMetadata,tags:['keep'],description:'private',prompt:'private prompt',aiPublished:true}});
+    fetchMock=installFetchMock(async(input,init,calls)=>calls.length===1?new Response('image-body'):Response.json({rating_label:'everyone'}));
+    const res=await onRequest(makeContext({request:new Request('https://example.com/file/cat.png'),env:{img_url,ModerateContentApiKey:'test-key'},params:{id:'cat.png'}}));
+    assert.strictEqual(res.status,200);const m=img_url.snapshot('cat.png').metadata;
+    assert.deepStrictEqual(m.tags,['keep']);assert.strictEqual(m.description,'private');assert.strictEqual(m.prompt,'private prompt');assert.strictEqual(m.aiPublished,true);assert.strictEqual(m.Label,'everyone');
+  });
+
+  it('still blocks a new adult verdict if its KV write fails', async function () {
+    const onRequest=await getOnRequest(),img_url=createMockKV({'cat.png':baseMetadata});
+    img_url.put=async()=>{throw new Error('KV write limit exceeded');};
+    fetchMock=installFetchMock(async(input,init,calls)=>calls.length===1?new Response('image-body'):Response.json({rating_label:'adult'}));
+    const res=await onRequest(makeContext({request:new Request('https://example.com/file/cat.png'),env:{img_url,ModerateContentApiKey:'test-key'},params:{id:'cat.png'}}));
+    assert.strictEqual(res.status,302);assert.strictEqual(res.headers.get('Location'),'https://example.com/block-img.html');
+  });
+
   it('returns previewable proxied files inline when KV is not bound', async function () {
     const onRequest = await getOnRequest();
 

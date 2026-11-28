@@ -1,3 +1,6 @@
+import {sourceRecord,persistOwnedRecord} from './studio-records.js';
+import {cutoverReadOnly} from './cutover.js';
+import {metadataD1Enabled,readStudioMetadata} from './studio-metadata.js';
 export const LIST_TYPE = {
   NONE: 'None',
   WHITE: 'White',
@@ -35,23 +38,37 @@ export function normalizeMetadata(metadata, id) {
 }
 
 export async function getMetadata(env, id) {
-  const record = await env.img_url.getWithMetadata(id);
-  return record?.metadata || null;
+  const record = await sourceRecord(env,id);
+  if(!record?.metadata)return null;
+  if(metadataD1Enabled(env)){
+    try{return await readStudioMetadata(env.MEDIA_STUDIO_DB,id,record.metadata);}catch(error){if(error.code==='MEDIA_DELETED')return null;throw error;}
+  }
+  return record.metadata;
 }
 
-export async function getOrCreateMetadata(env, id) {
-  const record = await env.img_url.getWithMetadata(id);
+export async function getOrCreateMetadata(env, id, { persist = true } = {}) {
+  const record = await sourceRecord(env,id);
 
   if (record?.metadata) {
-    return normalizeMetadata(record.metadata, id);
+    return { ...record.metadata, ...normalizeMetadata(record.metadata, id) };
   }
 
   const metadata = createDefaultMetadata(id);
-  await putMetadata(env, id, metadata);
+  if (persist) {
+    try {
+      await putMetadata(env, id, metadata);
+    } catch {
+      // Read-through initialization must not turn a served file into HTTP 500.
+      // Do not log provider errors: they may contain private references.
+      console.error('File metadata initialization unavailable');
+    }
+  }
   return metadata;
 }
 
 export async function putMetadata(env, id, metadata) {
+  if(cutoverReadOnly(env))return;
+  if(await persistOwnedRecord(env,id,metadata))return;
   await env.img_url.put(id, '', { metadata });
 }
 

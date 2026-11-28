@@ -1,3 +1,4 @@
+import {cutoverManagement} from '../../utils/cutover.js';
 import {
     basicAuthentication,
     basicAuthChallengeResponse,
@@ -10,7 +11,7 @@ async function errorHandling(context) {
     try {
       return await context.next();
     } catch (err) {
-      return new Response(`${err.message}\n${err.stack}`, { status: 500 });
+      return new Response(JSON.stringify({error:'Management service temporarily unavailable'}), { status: 503, headers: {'Content-Type':'application/json', 'Cache-Control':'no-store'} });
     }
   }
 
@@ -19,8 +20,8 @@ async function errorHandling(context) {
         return dashboardDisabledResponse();
     }
 
-    if (isEmptyBinding(context.env.BASIC_USER)) {
-        return context.next();
+    if (isEmptyBinding(context.env.BASIC_USER) || isEmptyBinding(context.env.BASIC_PASS)) {
+        return new Response(JSON.stringify({error:'Admin credentials must be configured'}),{status:503,headers:{'Content-Type':'application/json','Cache-Control':'no-store'}});
     }
 
     if (!context.request.headers.has('Authorization')) {
@@ -39,4 +40,4 @@ async function errorHandling(context) {
     return context.next();
   }
   
-  export const onRequest = [errorHandling, authentication];
+  export const onRequest = [errorHandling, authentication, cutoverManagement];

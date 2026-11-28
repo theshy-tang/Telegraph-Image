@@ -1,0 +1,13 @@
+const assert=require('assert');const {createMockKV,makeContext}=require('./helpers');
+describe('Production cutover write pause',function(){
+ let cutover;before(async()=>cutover=await import('../functions/utils/cutover.js'));
+ const request=(path,method='GET')=>new Request('https://example.com'+path,{method});
+ it('blocks modern writes and legacy GET mutations while allowing read routes',async()=>{
+  for(const [path,method] of [['/api/manage/bulk','POST'],['/api/manage/tags','POST'],['/api/manage/delete/sample.jpg','GET'],['/api/manage/toggleLike/sample.jpg','GET'],['/api/manage/block/sample.jpg','GET'],['/api/manage/folders','POST']]){const r=await cutover.cutoverManagement({env:{MEDIA_STUDIO_CUTOVER_READ_ONLY:'true'},request:request(path,method),next:()=>{throw Error('Write reached handler');}});assert.strictEqual(r.status,503);assert.strictEqual((await r.json()).code,'CUTOVER_READ_ONLY');}
+  for(const path of ['/api/manage/list','/api/manage/media/sample.jpg','/api/manage/download/sample.jpg','/api/manage/search'])assert.strictEqual(await cutover.cutoverManagement({env:{MEDIA_STUDIO_CUTOVER_READ_ONLY:'true'},request:request(path),next:()=>123}),123);
+ });
+ it('preserves behavior with the pause unset',async()=>{assert.strictEqual(await cutover.cutoverManagement({env:{},request:request('/api/manage/bulk','POST'),next:()=>123}),123);});
+ it('does not persist read-triggered metadata during cutover',async()=>{const {putMetadata,getOrCreateMetadata}=await import('../functions/utils/metadata.js');const kv=createMockKV();const env={img_url:kv,MEDIA_STUDIO_CUTOVER_READ_ONLY:'true'};await putMetadata(env,'sample.jpg',{liked:true});const m=await getOrCreateMetadata(env,'sample.jpg');assert.strictEqual(m.fileName,'sample.jpg');assert.strictEqual(kv.operations.put.length,0);});
+ it('stops root uploads before reading bodies or invoking storage',async()=>{const upload=(await import('../functions/upload.js')).onRequestPost;const r=await upload({env:{MEDIA_STUDIO_CUTOVER_READ_ONLY:'true'},request:request('/upload','POST')});assert.strictEqual(r.status,503);});
+ it('keeps administrator authentication ahead of maintenance responses',async()=>{const middleware=(await import('../functions/api/manage/_middleware.js')).onRequest;let stage=-1;const ctx=makeContext({env:{MEDIA_STUDIO_CUTOVER_READ_ONLY:'true',BASIC_USER:'fixture',BASIC_PASS:'fixture',img_url:createMockKV()},request:request('/api/manage/bulk','POST')});ctx.next=()=>{stage++;return stage<middleware.length?middleware[stage](ctx):new Response('unexpected');};assert.strictEqual((await ctx.next()).status,401);});
+});

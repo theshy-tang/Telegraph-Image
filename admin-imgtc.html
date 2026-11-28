@@ -587,7 +587,7 @@
           cancelButtonText: '取消',
           type: 'warning'
         }).then(() => {
-          fetch(`./api/manage/delete/${key}`, { method: 'GET', credentials: 'include' })
+          fetch(`./api/manage/delete/${key}`, { method: 'DELETE', credentials: 'include' })
             .then(response => response.ok ? this.tableData.splice(index, 1) : Promise.reject())
             .then(() => {
               this.updateStats();
@@ -626,7 +626,7 @@
           cancelButtonText: '取消',
           type: 'warning'
         }).then(() => {
-          const promises = this.selectedFiles.map(file => fetch(`./api/manage/delete/${file.name}`, { method: 'GET', credentials: 'include' }));
+          const promises = this.selectedFiles.map(file => fetch(`./api/manage/delete/${file.name}`, { method: 'DELETE', credentials: 'include' }));
 
           Promise.all(promises)
             .then(results => {
